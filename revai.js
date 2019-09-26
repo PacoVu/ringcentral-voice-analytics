@@ -4,7 +4,7 @@ var watson = require('watson-developer-cloud');
 const pgdb = require('./db')
 
 function RevAIEngine() {
-  this.revAIClient = new rev_ai.REVAIClient(process.env.REVAI_APIKEY, "v1beta", null)
+  this.revAIClient = new rev_ai.REVAIClient(process.env.REVAI_APIKEY, "v1", null)
   this.nlu = new watson.NaturalLanguageUnderstandingV1({
       "url": "https://gateway.watsonplatform.net/natural-language-understanding/api",
       "username": process.env.WATSON_ANALYTIC_USERNAME,

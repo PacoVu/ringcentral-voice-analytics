@@ -163,8 +163,8 @@ var router = module.exports = {
       if (err){
         // not found?
       }else if (result.rows.length == 1){
-        console.log("no subId found")
-        // found the subId, use it to check and renew
+        console.log("transcript_id found")
+        // found the transcript_id, use it to check and renew
         var transcriptId = result.rows[0].transcript_id
         var itemId = result.rows[0].item_id
         var extensionId = result.rows[0].ext_id

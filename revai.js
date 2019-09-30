@@ -117,6 +117,7 @@ RevAIEngine.prototype = {
           }
           // polling
           var interval = setInterval(function () {
+            console.log("Polling...")
             var query = 'jobs/' + jobId
             thisEngine.revAIClient.get(query, "", (err,resp,body) => {
               var json = body.data

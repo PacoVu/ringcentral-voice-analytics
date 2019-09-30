@@ -21,7 +21,7 @@ module.exports.gcp_sentiment = function(table, blockTimeStamp, input, transcript
     subject += "; "
   }
   if (subject != "")
-    data['subject'] = subject
+    data['subject'] = subject.replace(reExp, "''")
   else
     data['subject'] = "Not defined"
 
@@ -129,12 +129,12 @@ module.exports.gcp_sentiment = function(table, blockTimeStamp, input, transcript
       query += ", categories='" + data.categories + "'"
       query += ", subject='" + data.subject + "'"
       query += " WHERE uid=" + thisId;
-      //console.log(query)
+      console.log(query)
       var ret = {}
       ret['sentiment'] = data.sentiment_label
-      ret['keywords'] = JSON.stringify(input.keywords)
+      ret['keywords'] = data.keywords //JSON.stringify(input.keywords)
       ret['subject'] = data.subject
-      console.log("KEYWORDS: " + JSON.stringify(input.keywords))
+      console.log("KEYWORDS: " + data['keywords']/*JSON.stringify(input.keywords)*/)
       //thisCallback(null, ret)
       pgdb.update(query, (err, result) => {
         if (err){

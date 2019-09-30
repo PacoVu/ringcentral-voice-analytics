@@ -1,7 +1,7 @@
-const speech = require('@google-cloud/speech').v1p1beta1;
-const language = require('@google-cloud/language').v1beta2; //.v1p1beta1;
+const speech = require('@google-cloud/speech'); //.v1p1beta1;
+const language = require('@google-cloud/language'); //.v1beta2; //.v1p1beta1;
 const fs = require('fs');
-const sqlite3 = require('sqlite3').verbose();
+//const sqlite3 = require('sqlite3').verbose();
 //var CALLS_DATABASE = './db/calllogs.db';
 // Creates a client
 const client = new speech.SpeechClient();

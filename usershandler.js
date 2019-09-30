@@ -2279,43 +2279,32 @@ function createTable(table, callback) {
   console.log("CREATE TABLE: " + table)
   if (process.env.FORCETODELETEUSERTABLE == 1){
     console.log("err: drop old table")
-    dropTable(table, (err, res) => {
-      //if (!err){
-        pgdb.create_table(table, (err, res) => {
-          if (err) {
-            console.log(err, res)
-            callback(err, err.message)
-            //copyTable(table)
-          }else{
-            console.log("DONE")
-            callback(null, "Ok")
-            if (table.indexOf('user_') >= 0)
-              copyTable(table)
-          }
-        })
-      //}
+    pgdb.create_table(table, (err, res) => {
+      if (err) {
+        console.log(err, res)
+        callback(err, err.message)
+      }else{
+        console.log("DONE")
+        callback(null, "Ok")
+      }
     })
   }else{
     pgdb.create_table(table, (err, res) => {
       if (err) {
         console.log(err, res)
         callback(err, err.message)
-        if (table.indexOf('user_') >= 0)
-          copyTable(table)
       }else{
         console.log("DONE")
         callback(null, "Ok")
-        if (table.indexOf('user_') >= 0)
-          copyTable(table)
       }
     })
   }
 }
 
-const sqlite3 = require('sqlite3').verbose();
+//const sqlite3 = require('sqlite3').verbose();
 const pgescape = require('pg-escape');
 var USERS_DATABASE = './db/users.db';
-
+/*
 function copyTable(table){
   console.log("Copy demos table")
   var query = 'SELECT * FROM demos'
@@ -2373,25 +2362,6 @@ function copyTable(table){
           item['profanities'],item['keywords'],item['entities'],item['concepts'],item['categories'],
           item['actions'],item['subject']]
           query += " ON CONFLICT DO NOTHING"
-          /*
-          query += " ON CONFLICT DO UPDATE SET"
-          query += ", wordsandoffsets='" + item['wordsandoffsets'] + "'"
-          query += ", transcript='" + item['transcript'] + "'"
-          query += ", conversations=" + item['conversations']
-          query += ", sentiments='" + item['sentiments'] + "'"
-          query += ", sentiment_label='" + item['sentiment_label'] + "'"
-          query += ", sentiment_score=" + item['sentiment_score']
-          query += ", sentiment_score_hi=" + item['sentiment_score_hi']
-          query += ", sentiment_score_low=" + item['sentiment_score_low']
-          query += ", has_profanity=" + item['has_profanity']
-          query += ", profanities='" + item['profanities'] + "'"
-          query += ", keywords='" + item['keywords'] + "'"
-          query += ", actions='" + item['actions'] + "'"
-          query += ", entities='" + item['entities'] + "'"
-          query += ", concepts='" + item['concepts'] + "'"
-          query += ", categories='" + item['categories'] + "'"
-          query += ", subject='" + item['subject'] + "'"
-          */
 
           pgdb.insert(query, values, (err, result) =>  {
             if (err){
@@ -2403,25 +2373,12 @@ function copyTable(table){
 
         },
         function (err){
-          /*
-          console.log("call once?")
-          var q = "CREATE INDEX " + table + "_fts_ind ON " + table
-          q += " USING gin (to_tsvector('simple', transcript), to_tsvector('simple', keywords))"
-          console.log(q)
 
-          pgdb.createIndex(q, (err, result) =>  {
-            if (err){
-              console.error(err.message);
-              //callback0(null, result)
-            }
-            console.log("index table created")
-          })
-          */
         })
     });
   });
 }
-
+*/
 function sortDates(a,b) {
   return new Date(parseInt(b.call_date)) - new Date(parseInt(a.call_date));
 }

@@ -10,7 +10,6 @@
     "RingCentral",
     "IBM Watson",
     "Google Cloud Platform",
-    "Haven Ondemand",
     "Machine Learning",
     "Voice Analytics"
   ],
@@ -20,7 +19,6 @@
     "@google-cloud/language": "^1.2.0",
     "@google-cloud/speech": "^1.5.0",
     "async": "^2.6.0",
-    "aws-sdk": "^2.330.0",
     "body-parser": "^1.17.2",
     "curl-request": "^1.1.1",
     "dotenv": "^4.0.0",

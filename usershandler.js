@@ -1325,6 +1325,7 @@ User.prototype = {
       var table = this.getUserTable()
       this.categoryList = []
       var revai = new RevAIEngine()
+      console.log("Inside handleRevAIWebhookPost")
       revai.getTranscription(transcriptId, itemId, null, table)
     },
     saveNewSubject: function(req, res){

@@ -152,7 +152,7 @@ var router = module.exports = {
 
   },
   handleRevAIWebhookPost: function(body){
-    console.log("handleRevAIWebhookPost called")
+    console.log("New code: handleRevAIWebhookPost called")
     var json = JSON.parse(body)
     console.log(json.job.id)
     console.log(json.job.created_on)
@@ -292,7 +292,7 @@ var router = module.exports = {
     if (index < 0)
       return this.forceLogin(req, res)
     var query = "SELECT processed FROM " + users[index].getUserTable() + " WHERE uid=" + req.query.uid;
-    //console.log(query)
+    console.log(query)
     pgdb.read(query, function (err, result) {
       if (err){
         res.send('{"status":"error"}')

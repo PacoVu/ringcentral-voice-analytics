@@ -157,7 +157,7 @@ var router = module.exports = {
     console.log(json.job.id)
     console.log(json.job.created_on)
     console.log(json.job.status)
-    var query = "SELECT * FROM inprogressedtranscription WHERE transcript_id=" + json.job.id;
+    var query = "SELECT * FROM inprogressedtranscription WHERE transcript_id='" + json.job.id + "'";
     console.log("query: " + query)
     pgdb.read(query, (err, result) => {
       console.log("result: " + JSON.stringify(result))
@@ -172,7 +172,7 @@ var router = module.exports = {
         console.log(transcriptId)
         console.log(itemId)
         console.log(extensionId)
-        var query = "DELETE FROM inprogressedtranscription WHERE transcript_id=" + json.job.id;
+        var query = "DELETE FROM inprogressedtranscription WHERE transcript_id='" + json.job.id+"'";
         console.log(query)
         pgdb.remove(query, function (err, result) {
           if (err){

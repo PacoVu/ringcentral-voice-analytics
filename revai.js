@@ -282,7 +282,7 @@ RevAIEngine.prototype = {
         else{
           var google = require('./google-ai');
           google.gcp_sentiment(table, blockTimeStamp, response, transcript, thisId, function(err, result){
-            console.log("TRANSCRIBE: " + JSON.stringify(result))
+            //console.log("TRANSCRIBE: " + JSON.stringify(result))
 
             if (!err){
               resp['status'] = "ok"

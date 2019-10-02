@@ -150,7 +150,7 @@ module.exports.gcp_sentiment = function(table, blockTimeStamp, input, transcript
           ret['sentiment'] = data.sentiment_label
           ret['keywords'] = input.keywords
           ret['subject'] = data.subject
-          console.log("KEYWORDS: " + input.keywords) // unescape(data.keywords)
+          //console.log("KEYWORDS: " + input.keywords) // unescape(data.keywords)
           thisCallback(null, ret)
         }
       });

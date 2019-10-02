@@ -158,10 +158,11 @@ var router = module.exports = {
     console.log(json.job.created_on)
     console.log(json.job.status)
     var query = "SELECT * FROM inprogressedtranscription WHERE transcript_id=" + json.job.id;
+    console.log("query: " + query)
     pgdb.read(query, (err, result) => {
-      console.log(result)
+      console.log("result: " + JSON.stringify(result))
       if (err){
-        // not found?
+        console.log("not found?")
       }else if (result.rows.length == 1){
         console.log("transcript_id found")
         // found the transcript_id, use it to check and renew

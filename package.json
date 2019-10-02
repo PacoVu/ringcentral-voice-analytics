@@ -1,6 +1,6 @@
 {
   "name": "vc-analytics",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Analyze recorded calls",
   "main": "index.js",
   "scripts": {
@@ -37,6 +37,6 @@
     "words-to-numbers": "^1.5.1"
   },
   "engines": {
-    "node": "8.1.2"
+    "node": "10.16.3"
   }
 }

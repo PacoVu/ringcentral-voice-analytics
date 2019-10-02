@@ -309,7 +309,7 @@ var router = module.exports = {
     if (index < 0)
       return this.forceLogin(req, res)
     var query = "UPDATE " + users[index].getUserTable() + " SET processed=0 WHERE uid=" + req.query.uid;
-    //console.log(query)
+    console.log(query)
     pgdb.update(query, function (err, result) {
       if (err){
         res.send('{"status":"error"}')

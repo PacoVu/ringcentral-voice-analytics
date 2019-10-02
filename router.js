@@ -152,15 +152,15 @@ var router = module.exports = {
 
   },
   handleRevAIWebhookPost: function(body){
-    console.log("New code: handleRevAIWebhookPost called")
+    console.log("handleRevAIWebhookPost called")
     var json = JSON.parse(body)
-    console.log(json.job.id)
-    console.log(json.job.created_on)
-    console.log(json.job.status)
+    //console.log(json.job.id)
+    //console.log(json.job.created_on)
+    //console.log(json.job.status)
     var query = "SELECT * FROM inprogressedtranscription WHERE transcript_id='" + json.job.id + "'";
-    console.log("query: " + query)
+    //console.log("query: " + query)
     pgdb.read(query, (err, result) => {
-      console.log("result: " + JSON.stringify(result))
+      //console.log("result: " + JSON.stringify(result))
       if (err){
         console.log("not found?")
       }else if (result.rows.length == 1){
@@ -293,7 +293,7 @@ var router = module.exports = {
     if (index < 0)
       return this.forceLogin(req, res)
     var query = "SELECT processed FROM " + users[index].getUserTable() + " WHERE uid=" + req.query.uid;
-    console.log(query)
+    //console.log(query)
     pgdb.read(query, function (err, result) {
       if (err){
         res.send('{"status":"error"}')

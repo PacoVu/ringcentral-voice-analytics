@@ -32,21 +32,9 @@ RevAIEngine.prototype = {
     }
     var thisRes = res
     var thisId = body.audioSrc
-    //console.log("thisId: " + thisId)
     var thisEngine = this
     var thisBody = body
-    //console.log(JSON.stringify(data))
-/*
-    // teemps delete till return
-    console.log("Use id")
-    //this.getTranscription(247067512, thisId, res, table, body)
-    this.getTranscription("60QP7w1lwdaZ", thisId, res, table)
-    return
-    console.log("should not come here")
-*/
     this.revAIClient.post('jobs', data, (err, resp, body) => {
-      //console.log("RESPONSE: " + resp.body.toString('utf8'))
-      //var json = JSON.parse(resp.body.toString('utf8'))
       if (err){
         console.log("CANNOT POST TRANSCRIPT REQUEST")
         var response = {}
@@ -57,8 +45,8 @@ RevAIEngine.prototype = {
         }
         return
       }
-      //console.log("BODY: " + JSON.stringify(body))
-      var json = body.data //.toString('utf8') //.toString('utf8')
+
+      var json = body.data
       // use webhook
       if (process.env.REVAI_CALLBACK == "WebHook"){
         var response = {}
@@ -78,7 +66,6 @@ RevAIEngine.prototype = {
           query += "(transcript_id, item_id, ext_id) VALUES ($1, $2, $3)"
           var values = [json.id, thisId, extensionId]
           query += " ON CONFLICT DO NOTHING"
-          console.log("SUBS: " + query)
           pgdb.insert(query, values, (err, result) =>  {
             if (err){
               console.error(err.message);
@@ -93,10 +80,8 @@ RevAIEngine.prototype = {
           thisRes.send(JSON.stringify(response))
           thisRes = null
         }
-      }else{
-      // use wait loop for testing: 498839493
+      }else{ //use polling
         var jobId = json.id
-        console.log("JOB ID: " + jobId)
         if (json.status == "in_progress"){
           var timeOut = 0
           var response = {}
@@ -124,8 +109,6 @@ RevAIEngine.prototype = {
               if (json.status == "transcribed"){
                 clearInterval(interval);
                 console.log("read transcript jobid: " + json.id)
-                //var table = "user_" + extensionId
-                //thisEngine.getTranscription(json.id, thisId, thisRes, table, thisBody)
                 thisEngine.getTranscription(json.id, thisId, thisRes, table)
               }else if(json.status == "failed"){
                 console.log("failed transcribe")
@@ -145,16 +128,13 @@ RevAIEngine.prototype = {
       }
     })
   },
-  //getTranscription: function (transcriptId, id, res, table, body){
   getTranscription: function (transcriptId, id, res, table){
     var thisEngine = this
     var thisRes = res
-    console.log("get transcript and process data...")
-    var thisId = id //body.audioSrc
+    var thisId = id
     var query = 'jobs/' + transcriptId + "/transcript"
     this.revAIClient.get(query, "", (err,resp,body) => {
       var json = JSON.parse(resp.body.toString('utf8'))
-      //console.log(resp.body.toString('utf8'))
       var transcript = ""
       var conversations = []
       var wordsandoffsets = []
@@ -172,14 +152,13 @@ RevAIEngine.prototype = {
           sentence += element.value
           if (element.type == 'text'){
             if (element.value.toLowerCase() == "um" || element.value.toLowerCase() == "uh"){
-              console.log("remove: " + element.value.toLowerCase())
               word = ""
               ts = -1
             }else{
               word = element.value
               ts = element.ts
             }
-          }else { //if (element.type == 'punct'){
+          }else {
             var wordoffset = {}
             if (word != ""){
               if (element.value == "." || element.value == "," || element.value == "?")
@@ -204,10 +183,7 @@ RevAIEngine.prototype = {
         blockTimeStamp.push(speaker_timestamp)
         conversations.push(speakerSentence)
       }
-      //console.log("CONVERSATION: " + JSON.stringify(conversations))
-      //console.log("TRANSCRIPT: " + transcript)
       var query = "UPDATE " + table + " SET wordsandoffsets='" + escape(JSON.stringify(wordsandoffsets)) + "', transcript='" + escape(transcript) + "', conversations='" + escape(JSON.stringify(conversations))  + "' WHERE uid=" + thisId;
-      //console.log(query)
       pgdb.update(query, function(err, result) {
         if (err){
           console.error(err.message);
@@ -215,46 +191,36 @@ RevAIEngine.prototype = {
           console.error("TRANSCRIPT UPDATE DB OK");
         }
       });
-      thisEngine.preAnalyzing(table, /*blockTimeStamp,*/ conversations, thisId, thisRes)
+      thisEngine.preAnalyzing(table, conversations, thisId, thisRes)
     })
   },
-  preAnalyzing: function(table, /*blockTimeStamp,*/ conversations, thisId, res){
+  preAnalyzing: function(table, conversations, thisId, res){
     var thisRes = res
     var transcript = ""
     var wordCount = 0
     var blockTimeStamp = []
 
-    //for (var item of conversations){
     for (var i=0; i<conversations.length; i++){
       var item = conversations[i]
       var paragraph = item.sentence.join("")
-      //console.log("Paragraph: " + paragraph)
-      //console.log("TS: " + item.timestamp)
       transcript += paragraph + " "
       var sentenceArr = paragraph.split(/[.?!]+/)
       var tsPos = 0
       for (sentence of sentenceArr){
         sentence = sentence.trim()
-        //console.log("Sentence: " + sentence)
         if (sentence != ""){
           var wArr = sentence.split(" ")
           var speaker_timestamp = {}
           speaker_timestamp['sentence'] = sentence
           speaker_timestamp['speakerId'] = item.speakerId
-          //console.log("TS POS: " + tsPos)
-          //console.log("TS TIME: " + item.timestamp[tsPos])
           speaker_timestamp['timeStamp'] = item.timestamp[tsPos] // need to improve to get closer timestamp
           blockTimeStamp.push(speaker_timestamp)
           tsPos += wArr.length
         }
       }
       wordCount += item.sentence.length
-      //console.log("check transcript: " + transcript)"1051895492020" "1051895352020""1051895639020"
-      // UPDATE user_1426275020 SET processed=0 WHERE uid=1051895639020
     }
     transcript = transcript.trim()
-    console.log("Watson data analysis")
-    //console.log("DATA: " + transcript)
     if (wordCount > 8){
       var parameters = {
         'text': transcript,
@@ -282,8 +248,6 @@ RevAIEngine.prototype = {
         else{
           var google = require('./google-ai');
           google.gcp_sentiment(table, blockTimeStamp, response, transcript, thisId, function(err, result){
-            //console.log("TRANSCRIBE: " + JSON.stringify(result))
-
             if (!err){
               resp['status'] = "ok"
               resp['result'] = result
@@ -325,56 +289,3 @@ RevAIEngine.prototype = {
   }
 }
 module.exports = RevAIEngine;
-/*
-var callback = function(err,resp,body){
-  console.log("callback")
-  //console.log(resp)
-  //console.log(JSON.stringify( resp.body.toString('utf8')));
-  //body.setEncoding('utf8');
-  //console.log(body)
-  var json = JSON.parse(resp.body.toString('utf8'))
-  //console.log(resp.body.toString('utf8'))
-  //console.log(json.monologues)
-  var transcript = ""
-  var conversations = []
-  var wordswithoffsets = []
-  var blockTimeStamp = []
-  var sentencesForSentiment = []
-  for (var item of json.monologues){
-    var speakerSentence = {}
-    speakerSentence['sentence'] = []
-    speakerSentence['timestamp'] = []
-    speakerSentence['speakerId'] = item.speaker
-    var sentence = ""
-    for (var element of item.elements){
-      sentence += element.value
-      if (element.type == 'text'){
-        //var wordoffset = {}
-        //wordoffset['word'] = element.value
-        //wordoffset['offset'] = element.ts
-        //wordswithoffsets.push(wordoffset)
-        speakerSentence['timestamp'].push(element.ts)
-        //speakerSentence['sentence'].push(element.value)
-      }
-    }
-    sentence = sentence.trim()
-    transcript += sentence
-    var wordArr = sentence.split(" ")
-    speakerSentence['sentence'] = wordArr
-    //console.log("words #: " + wordArr.length)
-    //console.log("times #: " + speakerSentence.timestamp.length)
-    for (var i=0; i<speakerSentence.timestamp.length; i++){
-      var wordoffset = {}
-      if (i < wordArr.length)
-      wordoffset['word'] = wordArr[i]
-      wordoffset['offset'] = speakerSentence.timestamp[i]
-      wordswithoffsets.push(wordoffset)
-    }
-    conversations.push(speakerSentence)
-  }
-  console.log(transcript)
-  console.log(JSON.stringify(wordswithoffsets))
-  console.log(JSON.stringify(conversations))
-  thisObj.preAnalyzing(table, blockTimeStamp, textWithPunctuation, transcript, thisId, thisRes)
-}
-*/

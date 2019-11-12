@@ -125,7 +125,6 @@ User.prototype = {
     var query = "SELECT * FROM " + this.getSubscriptionIdTable() + " WHERE ext_id=" + this.getExtensionId();
     console.log(query)
     pgdb.read(query, (err, result) => {
-      //console.log(result)
       var autoProcessing = false
       if(err != null){
         console.log(err);
@@ -175,10 +174,7 @@ User.prototype = {
           console.log('passed getPlatform');
           p.get('/account/~/extension/~/')
             .then(function(response) {
-              //console.log(response)
               var jsonObj = response.json();
-              //console.log(JSON.stringify(jsonObj))
-              //console.log("Account Id: " + jsonObj.account.id)
               thisUser.rc_platform.setAccountId(jsonObj.account.id)
               var table = thisUser.getUserTable()
               createTable(table, function(err, res){
@@ -196,17 +192,6 @@ User.prototype = {
                 })
                 thisRes.send('login success');
               })
-              /*
-              table = thisUser.getSubscriptionIdTable()
-              createTable(table, function(err, res){
-                if (!err)
-                  console.log('subscription table created');
-                createTable("transcription-inprogress", function(err, res){
-                if (!err)
-                    console.log('transcription-inprogress table created');
-                })
-              })
-              */
               if (jsonObj.permissions.admin.enabled){
                 thisUser.setAdmin(true)
                 thisUser.getAccountExtensions(jsonObj.id)
@@ -265,8 +250,6 @@ User.prototype = {
     p.logout()
       .then(function (token) {
         console.log("logged out")
-        //p.auth().cancelAccessToken()
-        //p = null
         callback(null, "ok")
       })
       .catch(function (e) {
@@ -292,7 +275,6 @@ User.prototype = {
           item['id'] = record.id
           item['extNum'] = record.extensionNumber.toString()
           item['fullName'] = record.contact.firstName + " " + record.contact.lastName
-          //console.log(item.fullName)
           extensionList.push(item)
         }
         // add the fake extension info
@@ -323,17 +305,14 @@ User.prototype = {
       var query = "SELECT categories FROM " + this.getUserTable();
       var categoryArr = []
       pgdb.read(query, (err, result) => {
-        //console.log(result.rows)
         if(err != null){
           console.log(err);
           return categoryArr
-          //callback(err);
         }
         if (result.rows.length == 0){
           var response = {}
           res.send(response)
         }else
-          //console.log("category: " + unescape(JSON.stringify(allRows)))
           categoryArr.push("Unclassified")
           for (var item of result.rows){
             var cat = unescape(item.categories)
@@ -352,7 +331,6 @@ User.prototype = {
                         }
                       }
                       if (newItem){
-                        //console.log("item: " + a)
                         categoryArr.push(a)
                       }
                     }
@@ -361,7 +339,6 @@ User.prototype = {
               }
             }
           }
-          //console.log("categoryArr: " + JSON.stringify(categoryArr))
           this.setCategoryList(categoryArr)
           retObj['categories'] = JSON.stringify(categoryArr)
           this.readFullData(nextQuery, retObj, res, field, keyword)
@@ -619,7 +596,7 @@ User.prototype = {
       }
       var thisRes = res
       var thisUser = this
-      //thisRes.send('{"result":"ok"}')
+
       console.log("EXT ID: " + this.getExtensionId())
       var query = "SELECT * FROM " + this.getSubscriptionIdTable() + " WHERE ext_id=" + this.getExtensionId();
       pgdb.read(query, (err, result) => {
@@ -659,7 +636,6 @@ User.prototype = {
           console.log("subId :" + subId)
           if (subId == ''){
             console.log("empty subID")
-            //var extensionList = thisUser.getExtensionList()
             thisUser.rc_platform.subscribeForNotification(selectedExtensionList, thisUser.isAdmin(), function(err, subId){
               console.log("RETURNED EXT ID: " + thisUser.getExtensionId())
               if (!err){
@@ -684,7 +660,6 @@ User.prototype = {
             thisUser.rc_platform.removeOrphanSubscription(subId, function(err, result){
               console.log("OLD ORPHANED SUBSCRIPTION REMOVED")
               if (!err){
-                //var extensionList = thisUser.getExtensionList()
                 thisUser.rc_platform.subscribeForNotification(selectedExtensionList, thisUser.isAdmin(), function(err, subId){
                   if (!err){
                     thisRes.send('{"result":"ok"}')
@@ -713,16 +688,11 @@ User.prototype = {
       });
     },
     removeSubscription: function(res) {
-      //this.rc_platform.removeAllSubscriptions()
-      //return
-      //console.log(res)
       var thisRes = res
-      //res.send('{"result":"ok"}')
       var thisUser = this
       var extId = thisUser.getExtensionId()
       var query = "SELECT * FROM " + this.getSubscriptionIdTable() + " WHERE ext_id=" + extId;
       pgdb.read(query, (err, result) => {
-        //console.log(result.rows)
         if(err != null){
           thisRes.send('{"result":"failed"}')
           return console.log(err);
@@ -767,8 +737,6 @@ User.prototype = {
       });
     },
     handleWebhooksPost: function(msg) {
-      //console.log("CALLBACK FROM WebHook: " + JSON.stringify(msg))
-      //var extId = msg.body.extensionId
       var thisUser = this
       if (msg.event.indexOf('message-store') > 0){
         console.log("message-store type: " + msg.body.changes[0].type)
@@ -777,7 +745,7 @@ User.prototype = {
         if (msg.body.changes[0].type == "VoiceMail" && msg.body.changes[0].newCount > 0){
           return this.notificationUser.hasMissedCall = true
         }
-        //if (msg.body.changes[0].type == "VoiceMail" && (msg.body.changes[0].newCount > 0 || msg.body.changes[0].updatedCount > 0)){
+
         if (msg.body.changes[0].type == "VoiceMail" && msg.body.changes[0].updatedCount > 0){
           if (this.notificationUser.hasMissedCall == true) {
             var date = new Date()
@@ -788,7 +756,6 @@ User.prototype = {
             stopTime = stopTime.replace('/', ':')
             console.log("END TIME: " + stopTime)
             var extId = msg.body.extensionId
-            //var startTime = this.notificationUser.startTime
             this.notificationUser.stopTime = stopTime
             this.notificationUser.callRecording = false
             this.notificationUser.hasMissedCall = false
@@ -903,14 +870,11 @@ User.prototype = {
       params['dateTo'] = this.notificationUser.stopTime
       if (this.notificationUser.callRecording)
         params['recordingType'] = 'All' //withCallRecording
-      //console.log(JSON.stringify(params))
       var p = this.getPlatform()
-      //console.log(endpoint)
       var thisUser = this
       p.get(endpoint, params)
       .then(function(resp){
         var json = resp.json()
-        //console.log("RESPONSE: " + JSON.stringify(json))
         if (json.records.length == 0){
           return
         }
@@ -986,12 +950,6 @@ User.prototype = {
               }
             }
             var query = "INSERT INTO " + thisUser.getUserTable()
-            /*
-            query += "(uid, rec_id, call_date, call_type, extension_num, full_name, from_number, from_name, to_number, to_name, recording_url, duration, direction, processed, wordsandoffsets, transcript, conversations, sentiments, sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, profanities, keywords, entities, concepts, categories, actions)"
-            query += " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)"
-            var values = [item['uid'], item['rec_id'],item['call_date'],item['call_type'],item['extension_num'],item['full_name'],item['from_number'],item['from_name'],item['to_number'],item['to_name'],item['recording_url'],item['duration'],item['direction'],0,"","","","","",0,0,0,0,"","","","","",""]
-            query += " ON CONFLICT DO NOTHING"
-            */
             query += "(uid, rec_id, call_date, call_type, extension_id, extension_num, full_name, from_number, from_name, to_number, to_name, recording_url, duration, direction, processed, wordsandoffsets, transcript, conversations, sentiments, sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, profanities, keywords, entities, concepts, categories, actions, subject)"
             query += " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,$28,$29,$30,$31)"
             var values = [item['uid'], item['rec_id'],item['call_date'],item['call_type'],item['extension_id'],item['extension_num'],item['full_name'],item['from_number'],item['from_name'],item['to_number'],item['to_name'],item['recording_url'],item['duration'],item['direction'],0,"","","","","",0,0,0,0,"","","","","","",""]
@@ -1006,7 +964,7 @@ User.prototype = {
             })
           },
           function (err){
-            //console.log("function err")
+            console.log("function err")
             //return callback (null, json);
           })
         })
@@ -1015,11 +973,8 @@ User.prototype = {
           var err = e.toString();
           if (err.includes("ReadCompanyCallLog")){
             errorRes['calllog_error'] = "You do not have admin role to access account level. You can choose the extension access level."
-            console.log(errorRes['calllog_error'])
-            //thisRes.send(JSON.stringify(errorRes))
           }else{
             errorRes['calllog_error'] = "Cannot access call log."
-            console.log(errorRes['calllog_error'])
           }
           console.log(err)
         })
@@ -1046,7 +1001,6 @@ User.prototype = {
             console.log("CALL Watson?")
             var watson = new WatsonEngine()
             watson.transcribe(table, null, body, bufferStream)
-            //watson.transcribe("demos", res, body, fs.createReadStream(audioSrc))
           })
           .catch(function(e){
             console.log(e)
@@ -1069,29 +1023,11 @@ User.prototype = {
         }
         thisRes.send('{"status":"ok"}')
       });
-      /*
-      var thisRes = res
-      var thisUser = this
-      var json = JSON.parse(req.body.calls)
-      async.each(json,
-        function(item, callback){
-          var query = "DELETE FROM " + thisUser.getUserTable() + " WHERE uid=" + item.id;
-          pgdb.remove(query, function (err, result) {
-            callback(null, result)
-          });
-        },
-        function (err){
-          console.log("remove done")
-          thisRes.send('{"status":"ok"}')
-        })
-      */
     },
     deleteItemFromCallLogDb: function(req, res){
       var thisRes = res
       var thisReq = req
       var thisUser = this
-      //console.log(req.body.id)
-      //console.log(req.body.rec_id)
       var json = JSON.parse(req.body.calls)
       var p = thisUser.getPlatform()
       var table = thisUser.getUserTable()
@@ -1126,49 +1062,6 @@ User.prototype = {
           thisRes.send('{"status":"ok"}')
         })
     },
-    /*
-    deleteItemFromCallLogDb: function(req, res){
-      var thisRes = res
-      var thisReq = req
-      //console.log(req.body.id)
-      //console.log(req.body.rec_id)
-      if (req.body.type == "PR"){
-        var query = "DELETE FROM " + this.getUserTable() + " WHERE uid=" + req.body.id;
-        //console.log(query)
-        pgdb.remove(query, function (err, result) {
-          if (err){
-            thisRes.send('{"status":"error"}')
-            return console.error(err.message);
-          }
-          thisRes.send('{"status":"ok"}')
-        });
-      }else{
-        var endpoint = '/restapi/v1.0/account/~/call-log/' + req.body.rec_id
-        if (!this.isAdmin())
-          endpoint = '/restapi/v1.0/account/~/extension/~/call-log/' + req.body.rec_id
-        var p = this.getPlatform()
-        var table = this.getUserTable()
-        p.delete(endpoint)
-          .then(function(){
-            var query = "DELETE FROM " + table + " WHERE uid=" + req.body.id;
-            //console.log(query)
-            pgdb.remove(query, function (err, result) {
-              if (err){
-                thisRes.send('{"status":"error"}')
-                return console.error(err.message);
-              }
-              //engine.loadCallsFromDB(req, res)
-              thisRes.send('{"status":"ok"}')
-            });
-          })
-          .catch(function(e){
-            console.log(e)
-            //engine.loadCallsFromDB(req, res)
-            thisRes.send('{"status":"error"}')
-          })
-      }
-    },
-    */
     createRecord: function(req, res){
       var item = {}
       item['from_number'] = "+16502245476"
@@ -1292,7 +1185,6 @@ User.prototype = {
         if (err){
           return console.error(err.message);
         }
-        //console.log(JSON.stringify(result.rows[0]))
         var row = result.rows[0]
         if (this.getUserId() != 100){
           var p = this.getPlatform()
@@ -1308,7 +1200,6 @@ User.prototype = {
         row.sentiments = unescape(row.sentiments)
         row.profanities = unescape(row.profanities)
         row.wordsandoffsets = unescape(row.wordsandoffsets)
-        //console.log(row.sentiments)
         var page = 'recordedcall'
         if (row.call_type == 'VR')
           page = 'videocall'
@@ -1331,7 +1222,6 @@ User.prototype = {
           for (var ext of this.extensionList){
             if (this.extensionId == ext.id){
               selectedExtensionList.push(ext)
-              //console.log("found: " + JSON.stringify(selectedExtensionList))
               break
             }
           }
@@ -1341,7 +1231,6 @@ User.prototype = {
             for (var ext of this.extensionList){
               if (item == ext.id){
                 selectedExtensionList.push(ext)
-                //console.log("found: " + JSON.stringify(selectedExtensionList))
                 break
               }
             }
@@ -1406,12 +1295,6 @@ User.prototype = {
         console.log(JSON.stringify(refKeywords))
 
         res.send('{"status":"OK"}')
-        /*
-        res.render('recordedcall', {
-          results: result,
-          searchWord: req.body.searchWord
-        })
-        */
       });
     },
     searchCallsFromDB: function(req, res){
@@ -1439,42 +1322,30 @@ User.prototype = {
             filterQuery += " AND categories LIKE '%" + escape(req.body.categories) + "%'"
         }
       }
-      //query += filterQuery
+
       var searchArg = req.body.search.trim()
       if (!searchArg) {
         searchArg = '*';
       }
       // check if needed processed field
-      //if (req.body.fields == "all" OR req.body.fields == "transcript" OR req.body.fields == "all")
       if (req.body.fields == "all"){
         if (searchArg != "*") {
-            //query += "processed=1 AND ("
             searchQuery += "(transcript ILIKE '%" + searchArg + "%' OR "
-            //searchQuery += "to_tsvector('simple', 'transcript') @@ to_tsquery('simple', '" + searchArg + ")"
             searchQuery += "keywords ILIKE '%" + searchArg + "%' OR "
-            //searchQuery += "concepts ILIKE '%" + searchArg + "%' OR "
             searchQuery += "from_number ILIKE '%" + searchArg + "%' OR "
             searchQuery += "from_name ILIKE '%" + searchArg + "%' OR "
             searchQuery += "to_number ILIKE '%" + searchArg + "%' OR "
             searchQuery += "to_name ILIKE '%" + searchArg + "%')"
-            //searchQuery += "extension_num ILIKE '%" + searchArg + "%')"
-            //searchQuery += "categories ILIKE '%" + searchArg + "%')"
         }
       }else if (req.body.fields == "transcript"){
         searchQuery += "processed=1"
         if (searchArg != "*") {
           searchQuery += " AND transcript ILIKE '%" + searchArg + "%'";
-          //searchQuery += " AND to_tsvector('simple', string) @@ to_tsquery('simple', '" + searchArg + ")"
-          //searchQuery += " OR transcript ILIKE '%" + escape(searchArg) + "%'";
-          //searchQuery += " OR transcript ILIKE '%" + escape(searchArg) + "%20%')";
         }
       }else if (req.body.fields == "keywords"){
         searchQuery += "processed=1"
         if (searchArg != "*") {
-          //searchQuery += " AND keywords ILIKE '%" + searchArg + "%'";
           searchQuery += " AND keywords ILIKE '%" + searchArg + "%'";
-          //searchQuery += " OR keywords ILIKE '%%20" + escape(searchArg) + "%'";
-          //searchQuery += " OR keywords ILIKE '%" + escape(searchArg) + "%20%')";
         }
       }else if (req.body.fields == "from"){
         if (searchArg != "*") {
@@ -1485,13 +1356,6 @@ User.prototype = {
           searchQuery += "to_number ILIKE '%" + searchArg + "%' OR to_name ILIKE '%" + searchArg + "%'"
         }
       }
-      /*
-      else if (req.body.fields == "extension"){
-        if (searchArg != "*") {
-          searchQuery += "extension_num='" + searchArg + "'";
-        }
-      }
-      */
       if (req.body.extensionnumbers != undefined){
         if (Array.isArray(req.body.extensionnumbers)){
           var count = req.body.extensionnumbers.length
@@ -1510,7 +1374,7 @@ User.prototype = {
             searchQuery += " AND extension_num='" + req.body.extensionnumbers + "'";
         }
       }
-      //console.log("SEARCH QUERY: " + searchQuery)
+
       if (filterQuery != "true")
         query +=  " WHERE " + filterQuery
       if (searchQuery != ""){
@@ -1519,9 +1383,6 @@ User.prototype = {
         else
           query +=  " AND " + searchQuery
       }
-      // console.log(filterQuery)
-      // console.log(searchQuery)
-      // console.log(query)
       var retObj = {}
       retObj['catIndex'] = req.body.categories
       retObj['searchArg'] = searchArg
@@ -1935,7 +1796,6 @@ User.prototype = {
       });
     },
     loadCallsFromDB: function(req, res){
-      //var query = "SELECT uid, rec_id, call_date, call_type, extension_num, full_name, recording_url, transcript, processed, from_number, from_name, to_number, to_name,sentiment_label, sentiment_score_hi, sentiment_score_low, has_profanity, sentiments FROM " + this.getUserTable();
       var query = "SELECT uid, rec_id, call_date, call_type, extension_num, full_name, recording_url, processed, from_number, from_name, to_number, to_name,sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, keywords, sentiments, direction, duration, subject, concepts FROM " + this.getUserTable();
       var retObj = {}
       retObj['catIndex'] = ''
@@ -1955,13 +1815,11 @@ User.prototype = {
     },
     readExtensionCallLog: function(body, extList, res){
       var ext = extList[this.extIndex]
-
       var endpoint = '/account/~/extension/'+ ext.id +'/call-log'
-      //console.log("Ext Id: " + ext.id)
       var thisBody = body
       var thisRes = res
       var thisUser = this
-      //console.log("DATE: " + body.dateFrom + "/" + body.dateTo)
+
       var params = {
         view: "Detailed",
         dateFrom: body.dateFrom,
@@ -2004,7 +1862,6 @@ User.prototype = {
         p.get(endpoint, params)
           .then(function(resp){
             var json = resp.json()
-            //console.log("REC LEN: " + json.records.length)
             if (json.records.length == 0){
               return callback (null, json);
             }
@@ -2124,88 +1981,12 @@ function dropTable(table, callback){
   pgdb.delete_table(query, (err, res) => {
     if (err) {
       console.log(err, res)
-      //copyTable(table)
     }else{
       console.log("DONE")
       callback(null, "done")
     }
   })
 }
-/*
-function createTable(table, callback) {
-  console.log("CREATE TABLE: " + table)
-  if (table.indexOf('user_') >= 0) {
-    var query = "SELECT subject FROM " + table;
-    pgdb.read(query, (err, result) => {
-      if(err != null){
-        // not exist => drop old table
-        console.log("err: drop old table")
-        dropTable(table, (err, res) => {
-          if (!err){
-            pgdb.create_table(table, (err, res) => {
-              if (err) {
-                console.log(err, res)
-                callback(err, err.message)
-                copyTable(table)
-              }else{
-                console.log("DONE")
-                callback(null, "Ok")
-                if (table.indexOf('user_') >= 0)
-                  copyTable(table)
-              }
-            })
-          }
-        })
-      }else{
-        if (result.rows.length == 0){
-          console.log("empty: drop old table")
-          dropTable(table, (err, res) => {
-            if (!err){
-              pgdb.create_table(table, (err, res) => {
-                if (err) {
-                  console.log(err, res)
-                  callback(err, err.message)
-                  copyTable(table)
-                }else{
-                  console.log("DONE")
-                  callback(null, "Ok")
-                  if (table.indexOf('user_') >= 0)
-                    copyTable(table)
-                }
-              })
-            }
-          })
-        }else
-          console.log("just try to create a new table")
-          pgdb.create_table(table, (err, res) => {
-            if (err) {
-              console.log(err, res)
-              callback(err, err.message)
-            }else{
-              console.log("DONE")
-              callback(null, "Ok")
-              if (table.indexOf('user_') >= 0)
-                copyTable(table)
-            }
-          })
-        }
-    });
-  }else{
-    pgdb.create_table(table, (err, res) => {
-      if (err) {
-        console.log(err, res)
-        callback(err, err.message)
-        copyTable(table)
-      }else{
-        console.log("DONE")
-        callback(null, "Ok")
-        if (table.indexOf('user_') >= 0)
-          copyTable(table)
-      }
-    })
-  }
-}
-*/
 
 function createTable(table, callback) {
   console.log("CREATE TABLE: " + table)
@@ -2233,84 +2014,6 @@ function createTable(table, callback) {
   }
 }
 
-//const sqlite3 = require('sqlite3').verbose();
-const pgescape = require('pg-escape');
-var USERS_DATABASE = './db/users.db';
-/*
-function copyTable(table){
-  console.log("Copy demos table")
-  var query = 'SELECT * FROM demos'
-  let db = new sqlite3.Database(USERS_DATABASE);
-  db.serialize(function() {
-    db.all(query, function(err, allRows) {
-      if(err != null){
-        console.log(err);
-        //callback(err);
-      }
-      const math = require('mathjs')
-      async.each(allRows,
-        function(row, callback){
-          var item = {}
-          var wordsandoffsets = []
-          var words = []
-          var offsets = []
-          Object.keys(row).forEach((key) => {
-            var temp = ""
-            if (key == "transcript"){
-              temp = unescape(row[key])
-              var reExp = new RegExp("'","g")
-              item[key] = temp.replace(reExp, "''")
-              //console.log(item[key])
-            }else if (key == "keywords"){
-              temp = unescape(row[key])
-              var reExp = new RegExp("'","g")
-              item[key] = temp.replace(reExp, "''")
-            }else if (key == "actions"){
-              temp = unescape(row[key])
-              var reExp = new RegExp("'","g")
-              item[key] = temp.replace(reExp, "''")
-            }else if (key == "entities"){
-              temp = unescape(row[key])
-              var reExp = new RegExp("'","g")
-              item[key] = temp.replace(reExp, "''")
-            }else if (key == "categories"){
-              temp = unescape(row[key])
-              var reExp = new RegExp("'","g")
-              item[key] = temp.replace(reExp, "''")
-            }else{
-              item[key] = row[key]
-            }
-          })
-
-          var query = "INSERT INTO " + table
-          query += "(uid, rec_id, call_date, call_type, extension_id, extension_num, full_name, from_number, from_name, to_number, to_name, recording_url, duration, direction, processed, wordsandoffsets, transcript, conversations, sentiments, sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, profanities, keywords, entities, concepts, categories, actions, subject)"
-          query += " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,$28,$29,$30,$31)"
-          //var values = [item['uid'], item['rec_id'],item['call_date'],item['call_type'],item['extension_id'],item['extension_num'],item['full_name'],item['from_number'],item['from_name'],item['to_number'],item['to_name'],item['recording_url'],item['duration'],item['direction'],0,"","","","","",0,0,0,0,"","","","","","",""]
-          var values = [item['uid'],item['rec_id'],item['call_date'],item['call_type'],item['extension_id'],item['extension_num'],
-          item['full_name'],item['from_number'],item['from_name'],item['to_number'],item['to_name'],
-          item['recording_url'],item['duration'],item['direction'],item['processed'],item['wordsandoffsets'],
-          item['transcript'],item['conversations'],item['sentiments'],item['sentiment_label'],
-          item['sentiment_score'],item['sentiment_score_hi'],item['sentiment_score_low'],item['has_profanity'],
-          item['profanities'],item['keywords'],item['entities'],item['concepts'],item['categories'],
-          item['actions'],item['subject']]
-          query += " ON CONFLICT DO NOTHING"
-
-          pgdb.insert(query, values, (err, result) =>  {
-            if (err){
-              console.error(err.message);
-              //callback0(null, result)
-            }
-            callback(null, result)
-          })
-
-        },
-        function (err){
-
-        })
-    });
-  });
-}
-*/
 function sortDates(a,b) {
   return new Date(parseInt(b.call_date)) - new Date(parseInt(a.call_date));
 }

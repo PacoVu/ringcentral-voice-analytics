@@ -39,7 +39,7 @@ module.exports = {
     }else if (table == "inprogressedtranscription"){
       console.log("table: " + table)
       return pool.query(
-        'CREATE TABLE IF NOT EXISTS ' + table + '(transcript_id BIGINT PRIMARY KEY, item_id BIGINT NOT NULL, ext_id BIGINT NOT NULL)', callback);
+        'CREATE TABLE IF NOT EXISTS ' + table + '(transcript_id VARCHAR(18) PRIMARY KEY, item_id BIGINT NOT NULL, ext_id BIGINT NOT NULL)', callback);
     }
   },
   createIndex: (query, callback) => {

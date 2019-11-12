@@ -322,6 +322,7 @@ function truncateText(text){
 }
 
 var isPlaying = false;
+var isLoaded = false;
 var progress;
 var progressBar;
 var videoSliderVolumeRange;
@@ -395,25 +396,53 @@ function initializeAudioPlayer(){
     aPlayer.volume = this.value / 1000.0;
   }
   $('#fullscreen-icon').click(function() {
-    if (aPlayer.requestFullscreen) {
-      aPlayer.requestFullscreen();
-    } else if (aPlayer.mozRequestFullScreen) {
-      aPlayer.mozRequestFullScreen();
-    } else if (aPlayer.webkitRequestFullScreen) {
-      aPlayer.webkitRequestFullScreen();
+    var player = document.getElementById("video-wrapper")
+    if (
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullscreenElement ||
+      document.msFullscreenElement
+    ) {
+      if (document.exitFullscreen) {
+        document.exitFullscreen(); 
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.mozExitFullscreen) {
+        document.mozExitFullscreen();
+      }
+    } else {
+      if (document.requestFullscreen) {
+        player.requestFullscreen();
+      } else if (player.mozRequestFullScreen) {
+        player.mozRequestFullScreen();
+      } else if (player.webkitRequestFullScreen) {
+        player.webkitRequestFullScreen();
+      }
+    }
+    
+  });
+  $('#audio_player').click(function () {
+    if (!isLoaded) {
+      return;
+    }
+    if (isPlaying) {
+      aPlayer.pause();
+    } else {
+      aPlayer.play();
     }
   });
 
-  document.getElementById("audio_player").addEventListener('webkitfullscreenchange', onFullScreen)
+  document.getElementById("video-wrapper").addEventListener('webkitfullscreenchange', onFullScreen);
+  document.getElementById("video-wrapper").addEventListener('fullscreenchange', onFullScreen);
 }
 
 function onFullScreen(e) {
   enableCC = !enableCC
   if (enableCC){
-    $("#close-caption").show()
+    $('#fullscreen-icon').attr("src", "./img/closefullscreen.jpeg");
     getTranscriptLine()
   }else{
-    $("#close-caption").hide()
+    $('#fullscreen-icon').attr("src", "./img/fullscreen.jpeg");
     seekEnded()
   }
 }
@@ -441,6 +470,7 @@ function getTranscriptLine(){
 
 function audioLoaded() {
     mIndex = 0;
+    isLoaded = true;
     //upperBlockHeight = $("#upper_block").height()
     displayAnalytics('keywords');
 }

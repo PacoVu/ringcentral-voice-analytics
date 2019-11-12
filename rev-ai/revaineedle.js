@@ -6,7 +6,7 @@ var querystring = require('querystring')
 // Constructor
 function REVAIClient(apikey, version, proxy) {
   // always initialize all instance properties
-  if (version==undefined) {this.version="v1beta";}
+  if (version==undefined) {this.version="v1";}
   else {this.version=version;}
   this.apikey = apikey;
   this.endpoint = "https://api.rev.ai/revspeech/"+this.version+"/%s";

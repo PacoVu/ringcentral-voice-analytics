@@ -4,7 +4,7 @@ var watson = require('watson-developer-cloud');
 const pgdb = require('./db')
 
 function RevAIEngine() {
-  this.revAIClient = new rev_ai.REVAIClient(process.env.REVAI_APIKEY, "v1beta", null)
+  this.revAIClient = new rev_ai.REVAIClient(process.env.REVAI_APIKEY, "v1", null)
   this.nlu = new watson.NaturalLanguageUnderstandingV1({
       "url": "https://gateway.watsonplatform.net/natural-language-understanding/api",
       "username": process.env.WATSON_ANALYTIC_USERNAME,
@@ -21,7 +21,6 @@ RevAIEngine.prototype = {
         media_url: encodeURI(audioSrc),
         skip_diarization: "false",
         metadata: "Expecting webhook callback",
-
         callback_url: process.env.REVAI_WEBHOOK_ADDRESS
       }
     }else{
@@ -33,15 +32,15 @@ RevAIEngine.prototype = {
     }
     var thisRes = res
     var thisId = body.audioSrc
-    console.log("thisId: " + thisId)
+    //console.log("thisId: " + thisId)
     var thisEngine = this
     var thisBody = body
-    console.log(JSON.stringify(data))
+    //console.log(JSON.stringify(data))
 /*
     // teemps delete till return
     console.log("Use id")
     //this.getTranscription(247067512, thisId, res, table, body)
-    this.getTranscription(247067512, thisId, res, table)
+    this.getTranscription("60QP7w1lwdaZ", thisId, res, table)
     return
     console.log("should not come here")
 */
@@ -97,6 +96,7 @@ RevAIEngine.prototype = {
       }else{
       // use wait loop for testing: 498839493
         var jobId = json.id
+        console.log("JOB ID: " + jobId)
         if (json.status == "in_progress"){
           var timeOut = 0
           var response = {}
@@ -117,12 +117,13 @@ RevAIEngine.prototype = {
           }
           // polling
           var interval = setInterval(function () {
+            console.log("Polling...")
             var query = 'jobs/' + jobId
             thisEngine.revAIClient.get(query, "", (err,resp,body) => {
               var json = body.data
               if (json.status == "transcribed"){
                 clearInterval(interval);
-                console.log("read transcript")
+                console.log("read transcript jobid: " + json.id)
                 //var table = "user_" + extensionId
                 //thisEngine.getTranscription(json.id, thisId, thisRes, table, thisBody)
                 thisEngine.getTranscription(json.id, thisId, thisRes, table)
@@ -153,6 +154,7 @@ RevAIEngine.prototype = {
     var query = 'jobs/' + transcriptId + "/transcript"
     this.revAIClient.get(query, "", (err,resp,body) => {
       var json = JSON.parse(resp.body.toString('utf8'))
+      //console.log(resp.body.toString('utf8'))
       var transcript = ""
       var conversations = []
       var wordsandoffsets = []
@@ -177,10 +179,13 @@ RevAIEngine.prototype = {
               word = element.value
               ts = element.ts
             }
-          }else{
+          }else { //if (element.type == 'punct'){
             var wordoffset = {}
             if (word != ""){
-              word += element.value
+              if (element.value == "." || element.value == "," || element.value == "?")
+                word += element.value + " "
+              else
+                word += element.value
               wordoffset['word'] = word
               wordoffset['offset'] = ts
               wordsandoffsets.push(wordoffset)
@@ -199,6 +204,8 @@ RevAIEngine.prototype = {
         blockTimeStamp.push(speaker_timestamp)
         conversations.push(speakerSentence)
       }
+      //console.log("CONVERSATION: " + JSON.stringify(conversations))
+      //console.log("TRANSCRIPT: " + transcript)
       var query = "UPDATE " + table + " SET wordsandoffsets='" + escape(JSON.stringify(wordsandoffsets)) + "', transcript='" + escape(transcript) + "', conversations='" + escape(JSON.stringify(conversations))  + "' WHERE uid=" + thisId;
       //console.log(query)
       pgdb.update(query, function(err, result) {
@@ -208,17 +215,44 @@ RevAIEngine.prototype = {
           console.error("TRANSCRIPT UPDATE DB OK");
         }
       });
-      thisEngine.preAnalyzing(table, blockTimeStamp, conversations, thisId, thisRes)
+      thisEngine.preAnalyzing(table, /*blockTimeStamp,*/ conversations, thisId, thisRes)
     })
   },
-  preAnalyzing: function(table, blockTimeStamp, conversations, thisId, res){
+  preAnalyzing: function(table, /*blockTimeStamp,*/ conversations, thisId, res){
     var thisRes = res
     var transcript = ""
     var wordCount = 0
-    for (var item of conversations){
+    var blockTimeStamp = []
+
+    //for (var item of conversations){
+    for (var i=0; i<conversations.length; i++){
+      var item = conversations[i]
+      var paragraph = item.sentence.join("")
+      //console.log("Paragraph: " + paragraph)
+      //console.log("TS: " + item.timestamp)
+      transcript += paragraph + " "
+      var sentenceArr = paragraph.split(/[.?!]+/)
+      var tsPos = 0
+      for (sentence of sentenceArr){
+        sentence = sentence.trim()
+        //console.log("Sentence: " + sentence)
+        if (sentence != ""){
+          var wArr = sentence.split(" ")
+          var speaker_timestamp = {}
+          speaker_timestamp['sentence'] = sentence
+          speaker_timestamp['speakerId'] = item.speakerId
+          //console.log("TS POS: " + tsPos)
+          //console.log("TS TIME: " + item.timestamp[tsPos])
+          speaker_timestamp['timeStamp'] = item.timestamp[tsPos] // need to improve to get closer timestamp
+          blockTimeStamp.push(speaker_timestamp)
+          tsPos += wArr.length
+        }
+      }
       wordCount += item.sentence.length
-      transcript += item.sentence.join("")
+      //console.log("check transcript: " + transcript)"1051895492020" "1051895352020""1051895639020"
+      // UPDATE user_1426275020 SET processed=0 WHERE uid=1051895639020
     }
+    transcript = transcript.trim()
     console.log("Watson data analysis")
     //console.log("DATA: " + transcript)
     if (wordCount > 8){
@@ -246,11 +280,9 @@ RevAIEngine.prototype = {
             thisRes.send(resp)
           }
         else{
-          //console.log(JSON.stringify(response))
-          var haven = require('./hpe-ai');
-          console.log("load engine")
-          haven.haven_sentiment(table, blockTimeStamp, conversations, response, transcript, thisId, function(err, result){
-            //console.log("TRANSCRIBE: " + result)
+          var google = require('./google-ai');
+          google.gcp_sentiment(table, blockTimeStamp, response, transcript, thisId, function(err, result){
+            //console.log("TRANSCRIBE: " + JSON.stringify(result))
 
             if (!err){
               resp['status'] = "ok"

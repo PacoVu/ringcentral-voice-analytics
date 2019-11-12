@@ -157,22 +157,23 @@ var router = module.exports = {
     //console.log(json.job.id)
     //console.log(json.job.created_on)
     //console.log(json.job.status)
-    var query = "SELECT * FROM inprogressedtranscription WHERE transcript_id=" + json.job.id;
+    var query = "SELECT * FROM inprogressedtranscription WHERE transcript_id='" + json.job.id + "'";
+    //console.log("query: " + query)
     pgdb.read(query, (err, result) => {
-      //console.log(result)
+      //console.log("result: " + JSON.stringify(result))
       if (err){
-        // not found?
+        console.log("not found?")
       }else if (result.rows.length == 1){
-        console.log("no subId found")
-        // found the subId, use it to check and renew
+        console.log("transcript_id found")
+        // found the transcript_id, use it to check and renew
         var transcriptId = result.rows[0].transcript_id
         var itemId = result.rows[0].item_id
         var extensionId = result.rows[0].ext_id
         console.log(transcriptId)
         console.log(itemId)
         console.log(extensionId)
-        var query = "DELETE FROM inprogressedtranscription WHERE transcript_id=" + json.job.id;
-        //console.log(query)
+        var query = "DELETE FROM inprogressedtranscription WHERE transcript_id='" + json.job.id+"'";
+        console.log(query)
         pgdb.remove(query, function (err, result) {
           if (err){
             console.error(err.message);
@@ -299,7 +300,7 @@ var router = module.exports = {
         return console.error(err.message);
       }
       //console.log("RESULT: " + JSON.stringify(result))
-      console.log("PROCESS: " + result.rows[0].processed)
+      //console.log("PROCESS: " + result.rows[0].processed)
       res.send('{"status":"ok","state":' + result.rows[0].processed + ',"uid":' + req.query.uid + '}')
     });
   },
@@ -308,7 +309,7 @@ var router = module.exports = {
     if (index < 0)
       return this.forceLogin(req, res)
     var query = "UPDATE " + users[index].getUserTable() + " SET processed=0 WHERE uid=" + req.query.uid;
-    //console.log(query)
+    console.log(query)
     pgdb.update(query, function (err, result) {
       if (err){
         res.send('{"status":"error"}')

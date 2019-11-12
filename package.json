@@ -1,6 +1,6 @@
 {
   "name": "vc-analytics",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Analyze recorded calls",
   "main": "index.js",
   "scripts": {
@@ -10,36 +10,33 @@
     "RingCentral",
     "IBM Watson",
     "Google Cloud Platform",
-    "Haven Ondemand",
     "Machine Learning",
     "Voice Analytics"
   ],
   "author": "Paco-Vu",
   "license": "MIT",
   "dependencies": {
+    "node-pre-gyp": "*",
     "@google-cloud/language": "^1.2.0",
     "@google-cloud/speech": "^1.5.0",
     "async": "^2.6.0",
-    "aws-sdk": "^2.330.0",
     "body-parser": "^1.17.2",
     "curl-request": "^1.1.1",
     "dotenv": "^4.0.0",
     "ejs": "^2.5.6",
     "express": "^4.15.3",
     "express-session": "^1.15.6",
-    "havenondemand": "^1.4.0",
     "mathjs": "^5.1.0",
     "pg": "^7.4.3",
     "pg-escape": "^0.2.0",
     "randomatic": "^3.0.0",
     "request": "^2.88.0",
     "ringcentral": "^3.2.0",
-    "sqlite": "^2.9.1",
     "util": "^0.11.1",
     "watson-developer-cloud": "^3.4.0",
     "words-to-numbers": "^1.5.1"
   },
   "engines": {
-    "node": "8.1.2"
+    "node": "10.16.3"
   }
 }

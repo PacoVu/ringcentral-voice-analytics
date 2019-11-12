@@ -80,7 +80,7 @@ app.get('/logout', function (req, res) {
 
 app.get('/readlog', function (req, res) {
   console.log('readlog')
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   //console.log(req.query.level + '/' + req.query.user_id)
   //router.setUser(req.query.level, req.query.user_id)
   router.loadReadLogPage(req, res)
@@ -88,7 +88,7 @@ app.get('/readlog', function (req, res) {
 
 app.get('/oauth2callback', function(req, res){
   console.log("callback redirected")
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   router.login(req, res)
 })
 /*
@@ -115,7 +115,7 @@ app.get('/canceltranscription', function (req, res) {
 
 app.post('/readlogs', function (req, res) {
   console.log("readCallRecordingsAsync")
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   router.readCallRecordingsAsync(req, res)
 })
 app.post('/createrecord', function (req, res) {
@@ -138,32 +138,32 @@ app.get('/disablenotification', function (req, res) {
 
 app.get('/recordedcalls', function (req, res) {
   console.log("loadFromDB")
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   router.loadCallsFromDB(req, res)
 })
 app.post('/search', function (req, res) {
   console.log("searchCallsFromDB")
-  console.log("SESSION:" + JSON.stringify(req.session))
-  console.log(req.body)
+  //console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log(req.body)
   router.searchCallsFromDB(req, res)
 })
 
 app.post('/transcribe', function (req, res) {
   console.log("user clicks transcribe")
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   router.transcriptCallRecording(req, res)
 })
 
 app.post('/analyze', function (req, res) {
   console.log("user clicked analyze")
   console.log("searchWord: " + req.body.searchWord)
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   router.analyzeContent(req, res)
 })
 
 app.get('/proxyaudio', function (req, res) {
   console.log("proxy audio")
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   router.proxyAudio(req, res)
 })
 
@@ -185,7 +185,7 @@ app.post('/setsubject', function (req, res) {
 
 app.post('/setfullname', function (req, res) {
   console.log("user clicks set fullname")
-  console.log("SESSION:" + JSON.stringify(req.session))
+  //console.log("SESSION:" + JSON.stringify(req.session))
   router.saveFullName(req, res)
 })
 
@@ -243,3 +243,15 @@ app.post('/callback', function (req, res) {
 app.post('/callback/vtt', function (req, res) {
   console.log("transcript callback")
 })
+writeGoogleJSONFile()
+function writeGoogleJSONFile(){
+  //ornate-destiny-209015-0737a9e7196c.json
+  var fs = require('fs')
+  var fileName = "ornate-destiny-209015-0737a9e7196c.json"
+  fs.writeFile(fileName, process.env.GOOGLE_JSON, function(err) {
+      if(err) {
+          console.log(err);
+      }else
+          console.log("file created")
+  })
+}

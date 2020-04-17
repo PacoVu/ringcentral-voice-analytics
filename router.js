@@ -5,11 +5,9 @@ const pgdb = require('./db')
 var users = []
 
 function getUserIndex(id){
-  console.log("USERS LENGTH:" + users.length)
   for (var i=0; i<users.length; i++){
     var user = users[i]
     if (user != null){
-      console.log("USER ID:" + user.getUserId())
       if (id == user.getUserId()){
         return i
       }
@@ -19,10 +17,8 @@ function getUserIndex(id){
 }
 
 function getUserIndexByExtensionId(extId){
-  console.log("USERS LENGTH:" + users.length)
   for (var i=0; i<users.length; i++){
     var user = users[i]
-    console.log("EXTENSiON ID:" + user.getExtensionId())
     if (extId == user.getExtensionId()){
       return i
     }
@@ -54,7 +50,6 @@ var router = module.exports = {
       return
     }
     if (req.session.userId == 0) {
-      console.log("load login page")
       var id = new Date().getTime()
       console.log(id)
       req.session.userId = id;
@@ -72,26 +67,17 @@ var router = module.exports = {
         });
       }
     }else{
-      console.log("Must be a reload page")
       var index = getUserIndex(req.session.userId)
       if (index >= 0)
         users[index].loadReadLogPage(req, res)
-        /*
-        res.render('readlog', {
-          userName: users[index].getUserName(),
-          userLevel: users[index].getUserLevel()
-        })
-        */
       else{
         this.forceLogin(req, res)
       }
     }
   },
   forceLogin: function(req, res){
-    console.log("FORCE LOGIN")
     req.session.destroy();
     res.render('index')
-    //users[index].forceLogin(req, res)
   },
   login: function(req, res){
     var index = getUserIndex(req.session.userId)
@@ -100,13 +86,10 @@ var router = module.exports = {
     users[index].login(req, res, function(err, extensionId){
       // result contain extensionId. Use it to check for orphan user and remove it
       if (!err){
-        console.log("USERLENGTH: " + users.length)
         for (var i = 0; i < users.length; i++){
-          console.log("REMOVING")
           var extId = users[i].getExtensionId()
           var userId = users[i].getUserId()
           if (extId == extensionId && userId != req.session.userId){
-            console.log("REMOVE USER: " )
             users[i] = null
             users.splice(i, 1);
             break
@@ -123,9 +106,7 @@ var router = module.exports = {
     var thisObj = this
     users[index].logout(req, res, function(err, result){
       users[index] = null
-      console.log("user length before: " + users.length)
       users.splice(index, 1);
-      console.log("user length after: " + users.length)
       thisObj.forceLogin(req, res)
     })
 
@@ -143,8 +124,6 @@ var router = module.exports = {
     users[index].removeSubscription(res)
   },
   handleWebhooksPost: function(jsonObj){
-    //console.log(jsonObj)
-    //console.log(jsonObj.body.extensionId)
     var index = getUserIndexByExtensionId(jsonObj.ownerId)
     if (index < 0)
       return
@@ -152,28 +131,18 @@ var router = module.exports = {
 
   },
   handleRevAIWebhookPost: function(body){
-    console.log("handleRevAIWebhookPost called")
     var json = JSON.parse(body)
-    //console.log(json.job.id)
-    //console.log(json.job.created_on)
-    //console.log(json.job.status)
     var query = "SELECT * FROM inprogressedtranscription WHERE transcript_id='" + json.job.id + "'";
     //console.log("query: " + query)
     pgdb.read(query, (err, result) => {
-      //console.log("result: " + JSON.stringify(result))
       if (err){
         console.log("not found?")
       }else if (result.rows.length == 1){
-        console.log("transcript_id found")
         // found the transcript_id, use it to check and renew
         var transcriptId = result.rows[0].transcript_id
         var itemId = result.rows[0].item_id
         var extensionId = result.rows[0].ext_id
-        console.log(transcriptId)
-        console.log(itemId)
-        console.log(extensionId)
         var query = "DELETE FROM inprogressedtranscription WHERE transcript_id='" + json.job.id+"'";
-        console.log(query)
         pgdb.remove(query, function (err, result) {
           if (err){
             console.error(err.message);

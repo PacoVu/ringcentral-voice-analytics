@@ -739,9 +739,6 @@ User.prototype = {
     handleWebhooksPost: function(msg) {
       var thisUser = this
       if (msg.event.indexOf('message-store') > 0){
-        console.log("message-store type: " + msg.body.changes[0].type)
-        console.log("BODY: " + JSON.stringify(msg.body))
-        //console.log("MSG: " + JSON.stringify(msg))
         if (msg.body.changes[0].type == "VoiceMail" && msg.body.changes[0].newCount > 0){
           return this.notificationUser.hasMissedCall = true
         }
@@ -754,7 +751,6 @@ User.prototype = {
             var toDate = new Date(moreXXSeconds)
             var stopTime = toDate.toISOString()
             stopTime = stopTime.replace('/', ':')
-            console.log("END TIME: " + stopTime)
             var extId = msg.body.extensionId
             this.notificationUser.stopTime = stopTime
             this.notificationUser.callRecording = false
@@ -769,8 +765,6 @@ User.prototype = {
       }else if (msg.event.indexOf('presence') > 0){
         this.notificationUser.extensionId = msg.body.extensionId
         var newTelephonyStatus = msg.body.telephonyStatus
-        console.log("stored: " + this.notificationUser.telephonyStatus)
-        console.log("new   : " + newTelephonyStatus)
         if (this.notificationUser.telephonyStatus == "NoCall" && newTelephonyStatus == "Ringing"){
           this.notificationUser.telephonyStatus = newTelephonyStatus
           var date = new Date()
@@ -779,23 +773,15 @@ User.prototype = {
           var from = new Date(lessXXSeconds)
           var dateFrom = from.toISOString()
           this.notificationUser.startTime = dateFrom.replace('/', ':')
-
-          console.log("START TIME: " + this.notificationUser.startTime)
-          console.log("this extensionId " + this.notificationUser.extensionId + " has an incoming call")
         }
         else if (this.notificationUser.telephonyStatus == "Ringing" && newTelephonyStatus == "CallConnected"){
           this.notificationUser.telephonyStatus = newTelephonyStatus
-          //this.notificationUser.hasMissedCall = false
-          console.log("this extensionId " + this.notificationUser.extensionId + " has a accepted a call")
         }
         else if (this.notificationUser.telephonyStatus == "Ringing" && newTelephonyStatus == "NoCall"){
           this.notificationUser.telephonyStatus = newTelephonyStatus
-          //this.notificationUser.hasMissedCall = true
-          console.log("this extensionId " + this.notificationUser.extensionId + " has a missed call")
         }
         else if (this.notificationUser.telephonyStatus == "CallConnected" && newTelephonyStatus == "NoCall"){
           this.notificationUser.telephonyStatus = newTelephonyStatus
-          console.log("this extensionId " + this.notificationUser.extensionId + " has terminated a call")
           // now cause a 30 sec delay then check for call recordings
           var date = new Date()
           var stopTime = date.toISOString()
@@ -821,25 +807,20 @@ User.prototype = {
             startTime: "",
             hasMissedCall: false
         }
-        console.log("SAVED NOTIFICATION STATE: " + JSON.stringify(result))
         if (result.rows.length == 0){ // no row => add row for this user
           // create one
-          console.log("rows == 0")
           var query = "INSERT INTO notificationstate "
           query += "(ext_id, telephony_status, start_time, has_missed_call)"
           query += " VALUES ($1, $2, $3, $4)"
           var values = [extId, "NoCall", "", false]
           query += " ON CONFLICT DO NOTHING"
-          console.log("QUERY: " + query)
           pgdb.insert(query, values, (err, result) =>  {
             if (err){
               console.error(err.message);
             }
-            console.log("INSERT NEW NOTIFICATION")
             callback(null, notificationUser)
           })
         }else{
-          console.log("ASSIGN OLD NOTIFICATION")
           notificationUser.telephonyStatus = result.rows[0].telephony_status
           notificationUser.startTime = result.rows[0].start_time
           notificationUser.hasMissedCall = result.rows[0].has_missed_call
@@ -852,7 +833,6 @@ User.prototype = {
       query += ", start_time='" + data.startTime + "'"
       query += ", has_missed_call=" + data.hasMissedCall
       query += " WHERE ext_id=" + data.extensionId;
-      console.log("QUERY: " + query)
       pgdb.update(query, (err, result) =>  {
         if (err){
           console.error(err.message);
@@ -998,7 +978,6 @@ User.prototype = {
             var stream = require('stream');
             var bufferStream = new stream.PassThrough();
             bufferStream.end(buffer);
-            console.log("CALL Watson?")
             var watson = new WatsonEngine()
             watson.transcribe(table, null, body, bufferStream)
           })
@@ -1007,7 +986,6 @@ User.prototype = {
             throw e
           })
         }else if (process.env.TRANSCRIPT_ENGINE == "REV-AI"){
-          console.log("CALL Rev AI?")
           var revai = new RevAIEngine()
           revai.transcribe(table, null, body, recordingUrl, thisUser.getExtensionId())
         }
@@ -1095,7 +1073,6 @@ User.prototype = {
       })
     },
     transcriptCallRecording: function(req, res){
-      console.log("transcriptCallRecording")
       var table = this.getUserTable()
       this.categoryList = []
       if (req.body.type == "PR" || req.body.type == "VR"){
@@ -1146,20 +1123,16 @@ User.prototype = {
       var table = this.getUserTable()
       this.categoryList = []
       var revai = new RevAIEngine()
-      console.log("Inside handleRevAIWebhookPost")
       revai.getTranscription(transcriptId, itemId, null, table)
     },
     saveNewSubject: function(req, res){
       var query = "UPDATE " + this.getUserTable() + " SET subject='" + req.body.subject + "'"
       query += " WHERE uid=" + req.body.uid;
-      console.log("UPDATING SUB ID: " + query)
       var thisRes = res
       pgdb.update(query, (err, result) => {
         if (err){
-          console.log("CANNOT UPDATE SUBJECT" + err.message);
           thisRes.send('{"status":"failed","result":"' + err.message + '"}')
         }else{
-          console.log("NEW SUBJECT SAVED")
           thisRes.send('{"status":"ok","result":"Subject changed"}')
         }
       });
@@ -1167,14 +1140,11 @@ User.prototype = {
     saveNewFullName: function(req, res){
       var query = "UPDATE " + this.getUserTable() + " SET "+ req.body.field + "='" + req.body.full_name + "'"
       query += " WHERE uid=" + req.body.uid;
-      console.log("UPDATING SUB ID: " + query)
       var thisRes = res
       pgdb.update(query, (err, result) => {
         if (err){
-          console.log("CANNOT UPDATE FULLNAME" + err.message);
           thisRes.send('{"status":"failed","result":"' + err.message + '"}')
         }else{
-          console.log("NEW SUBJECT SAVED")
           thisRes.send('{"status":"ok","result":"Full name changed"}')
         }
       });
@@ -1390,8 +1360,6 @@ User.prototype = {
       retObj['fieldArg'] = req.body.fields
       retObj['typeArg'] = req.body.types
       retObj['extensionArgs'] = req.body.extensionnumbers || []
-      //retObj['posVal'] = req.body.positiveRange
-      //retObj['negVal'] = req.body.negativeRange
       if (this.categoryList.length == 0){
         this.readCategories(query, retObj, res, searchArg)
       }else{
@@ -1399,225 +1367,11 @@ User.prototype = {
         this.readFullData(query, retObj, res, req.body.fields, searchArg)
       }
     },
-/*
-    searchCallsFromDB_SentimentScore: function(req, res){
-      var posVal = req.body.positiveRange/1000
-      var negVal = (req.body.negativeRange/1000) * -1
-      //var query = "SELECT uid, rec_id, call_date, call_type, extension_num, full_name, recording_url, transcript, processed, from_number, from_name, to_number, to_name, sentiment_label, sentiment_score_hi, sentiment_score_low, has_profanity, keywords FROM " + this.getUserTable() + " WHERE "
-      var query = "SELECT uid, rec_id, call_date, call_type, extension_num, full_name, recording_url, processed, from_number, from_name, to_number, to_name, sentiment_label, sentiment_score_hi, sentiment_score_low, has_profanity, keywords, sentiments, direction, concepts FROM " + this.getUserTable() + " WHERE "
-      var typeQuery = ""
-      if (req.body.types != "all"){
-        var checkType = req.body.types
-        typeQuery = "call_type='" + checkType + "' AND "
-      }
-      var searchArg = req.body.search.trim()
-      if (!searchArg) {
-        searchArg = '*'
-      }
-      query += typeQuery
-      if (req.body.fields == "all"){
-        if (searchArg == "*") {
-          if (req.body.sentiment == "positive")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          else{
-            req.body.positiveRange = 1
-            req.body.negativeRange = 1
-            query += "(sentiment_score_low <= 0 OR sentiment_score_hi >= 0)";
-          }
-        }else{
-          if (req.body.sentiment == "all"){
-            query += "processed=1 AND ("
-            query += "transcript ILIKE '%" + searchArg + "%' OR "
-            query += "keywords ILIKE '%" + searchArg + "%' OR "
-            query += "concepts ILIKE '%" + searchArg + "%' OR "
-            query += "from_number ILIKE '%" + searchArg + "%' OR "
-            query += "from_name ILIKE '%" + searchArg + "%' OR "
-            query += "to_number ILIKE '%" + searchArg + "%' OR "
-            query += "to_name ILIKE '%" + searchArg + "%' OR "
-            query += "extension_num ILIKE '%" + searchArg + "%' OR "
-            query += "categories ILIKE '%" + searchArg + "%')"
-          }else{
-            query += "processed=1 AND ("
-            query += "transcript ILIKE '%" + searchArg + "%' OR "
-            query += "keywords ILIKE '%" + searchArg + "%' OR "
-            query += "concepts ILIKE '%" + searchArg + "%' OR "
-            query += "from_number ILIKE '%" + searchArg + "%' OR "
-            query += "from_name ILIKE '%" + searchArg + "%' OR "
-            query += "to_number ILIKE '%" + searchArg + "%' OR "
-            query += "to_name ILIKE '%" + searchArg + "%' OR "
-            query += "extension_num ILIKE '%" + searchArg + "%' OR "
-            query += "categories LIKE '%" + searchArg + "%') AND "
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          }
-        }
-      }else if (req.body.fields == "transcript"){
-        query += "processed=1 AND "
-        if (searchArg == "*") {
-          if (req.body.sentiment == "positive")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          else{
-            query += "(sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-          }
-        }else{
-          if (req.body.sentiment == "positive")
-            query += "transcript ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "transcript ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "transcript ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += "transcript ILIKE '%" + searchArg + "%' AND (sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }
-      }else if (req.body.fields == "keywords"){
-        query += "processed=1 AND "
-        if (searchArg == "*") {
-          if (req.body.sentiment == "positive")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          else{
-            query += "(sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-          }
-        }else{
-          if (req.body.sentiment == "positive")
-            query += "keywords ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "keywords ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "keywords ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += "keywords ILIKE '%" + searchArg + "%' " + " AND (sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }
-      }else if (req.body.fields == "concepts"){
-        query += " processed=1 AND "
-        if (searchArg == "*") {
-          if (req.body.sentiment == "positive")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          else{
-            query += "(sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-          }
-        }else{
-          if (req.body.sentiment == "positive")
-            query += "concepts ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "concepts ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "concepts ILIKE '%" + searchArg + "%' AND sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += "concepts ILIKE '%" + searchArg + "%' " + " AND (sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }
-      }else if (req.body.fields == "from"){
-        if (searchArg == "*") {
-          if (req.body.sentiment == "positive")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += "(sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }else{
-          query += "from_number ILIKE '%" + searchArg + "%' OR from_name ILIKE '%" + searchArg + "%'"
-          if (req.body.sentiment == "positive")
-            query += " AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi > " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += " AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low < " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += " AND sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += " AND (sentiment_score_low <= " + negVal + " OR sentiment_score_hi > " + posVal + ")";
-        }
-      }else if (req.body.fields == "to"){
-        if (searchArg == "*") {
-          if (req.body.sentiment == "positive")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi > " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low < " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          else
-            //query += "1";
-            query += "(sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }else{
-          query += "to_number ILIKE '%" + searchArg + "%' OR to_name ILIKE '%" + searchArg + "%'"
-          if (req.body.sentiment == "positive")
-            query += " AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += " AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += " AND sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += " AND (sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }
-      }else if (req.body.fields == "extension"){
-        if (searchArg == "*") {
-          if (req.body.sentiment == "positive")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += "(sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }else{
-          if (req.body.sentiment == "positive")
-            query += "extension_num='" + searchArg + "' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-          else if (req.body.sentiment == "negative")
-            query += "extension_num='" + searchArg + "' AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-          else if (req.body.sentiment == "neutral")
-            query += "extension_num='" + searchArg + "' AND sentiment_label='" + req.body.sentiment + "'";
-          else
-            query += "extension_num='" + searchArg + "' AND (sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-        }
-      }else if (req.body.fields == "categories"){
-        //console.log("SEARCH ARG: " + escape(req.body.categories))
-        query += "processed=1 AND categories LIKE '%" + escape(req.body.categories) + "%'"
-        if (req.body.sentiment == "positive")
-          query += " AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_hi >= " + posVal;
-        else if (req.body.sentiment == "negative")
-          query += " AND sentiment_label='" + req.body.sentiment + "' AND sentiment_score_low <= " + negVal;
-        else if (req.body.sentiment == "neutral")
-          query += " AND sentiment_label='" + req.body.sentiment + "'";
-        else
-          query += " AND (sentiment_score_low <= " + negVal + " OR sentiment_score_hi >= " + posVal + ")";
-      }
-      console.log(query)
-      var retObj = {}
-      retObj['catIndex'] = req.body.categories
-      retObj['searchArg'] = searchArg
-      retObj['sentimentArg'] = req.body.sentiment
-      retObj['fieldArg'] = req.body.fields
-      retObj['typeArg'] = req.body.types
-      retObj['posVal'] = req.body.positiveRange
-      retObj['negVal'] = req.body.negativeRange
-      if (this.categoryList.length == 0){
-        this.readCategories(query, retObj, res, searchArg)
-      }else{
-        retObj['categories'] = JSON.stringify(this.categoryList)
-        this.readFullData(query, retObj, res, req.body.fields, searchArg)
-      }
-    },
-*/
     readFullData: function(query, retObj, res, field, keyword){
       pgdb.read(query, (err, result) =>  {
         if (err){
           return console.error(err.message);
         }
-        //console.log(result)
         var rows = result.rows
         for (var i = 0; i < rows.length; i++){
           var r = rows[i]
@@ -1657,7 +1411,9 @@ User.prototype = {
             }else{
               rows[i]['searchMatch'] = ""
               const MAX_LENGTH = 90
-              var conversations = unescape(r.conversations)
+              var conversations = unescape(r.conversations).trim()
+              if (conversations == "")
+                continue
               var sentenceArr = JSON.parse(conversations)
               var searchWord = retObj.searchArg.toLowerCase()
               for (var sentence of sentenceArr){
@@ -1668,20 +1424,15 @@ User.prototype = {
                 var stopPos = 0
                 var searchWordLen = retObj.searchArg.length
                 if (index == 0){
-                  //console.log("SENTENCE START: " + sentence)
                   stopPos = (sentenceLen > MAX_LENGTH) ? MAX_LENGTH : sentenceLen
                   break
                 }else if (index > 0){
-                  //console.log("SENTENCE SOMEWHERE: " + sentence)
-                  // set startPos
-                  //startPos = (index + searchWordLen) - MAX_LENGTH
                   startPos = index - (MAX_LENGTH/2)
                   if (startPos < 0){
                     startPos = 0
                   }
                   stopPos = startPos + MAX_LENGTH
                   stopPos = (stopPos > sentenceLen) ? sentenceLen + 1 : stopPos
-                  // check and set beginning of the first word
                   if (startPos > 0){
                     for (startPos; startPos<index; startPos++){
                       if (sent[startPos] == "." /*|| sent[startPos] == "," || sent[startPos] == "."*/){
@@ -1690,11 +1441,8 @@ User.prototype = {
                       }
                     }
                   }
-                  // check and set end of the last word
                   var searchWordEndPos = index + searchWordLen - 1
-                  //console.log("END SEARCH POS: " + searchWordEndPos)
                   if (searchWordEndPos < stopPos){
-                    //console.log("cutting...")
                     if (stopPos < sentenceLen){
                       var lowBoundary = index + searchWordLen
                       for (stopPos; stopPos>=lowBoundary; stopPos--){

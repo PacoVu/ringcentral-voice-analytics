@@ -1,6 +1,6 @@
 {
   "name": "vc-analytics",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Analyze recorded calls",
   "main": "index.js",
   "scripts": {

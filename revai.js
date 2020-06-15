@@ -1,18 +1,17 @@
-//var revai = require('rev_ai')
-var rev_ai = require('./rev-ai/revaineedle.js')
-var watson = require('watson-developer-cloud');
+var rev_ai = require('rev_ai')
+const NLUnderstandingV1 = require("ibm-watson/natural-language-understanding/v1.js")
 const pgdb = require('./db')
 
 function RevAIEngine() {
   this.revAIClient = new rev_ai.REVAIClient(process.env.REVAI_APIKEY, "v1", null)
-  this.nlu = new watson.NaturalLanguageUnderstandingV1({
-      "url": "https://gateway.watsonplatform.net/natural-language-understanding/api",
-      "username": process.env.WATSON_ANALYTIC_USERNAME,
-      "password": process.env.WATSON_ANALYTIC_PWD,
-      'version': '2018-03-16'
-    });
-    return this
-  }
+
+  this.nlu = new NLUnderstandingV1({
+    version: '2019-07-12',
+    iam_apikey: process.env.WATSON_NLU_API_KEY,
+    url: 'https://gateway.watsonplatform.net/natural-language-understanding/api'
+  });
+  return this
+}
 RevAIEngine.prototype = {
   transcribe: function(table, res, body, audioSrc, extensionId) {
     var data = null
@@ -40,43 +39,47 @@ RevAIEngine.prototype = {
     // teemps delete till return
     console.log("Use id")
     //this.getTranscription(247067512, thisId, res, table, body)
-    this.getTranscription("60QP7w1lwdaZ", thisId, res, table)
+    this.getTranscription("2tCiUylktZlK", thisId, res, table)
     return
     console.log("should not come here")
 */
-    this.revAIClient.post('jobs', data, (err, resp, body) => {
-      //console.log("RESPONSE: " + resp.body.toString('utf8'))
-      //var json = JSON.parse(resp.body.toString('utf8'))
-      if (err){
-        console.log("CANNOT POST TRANSCRIPT REQUEST")
-        var response = {}
-        response['status'] = "failed"
-        response['message'] = "Cannot call Rev AI transcript"
-        if (thisRes != null){
-          thisRes.send(JSON.stringify(response))
-        }
-        return
+  this.revAIClient.post('jobs', data, (err, resp, jsonBody) => {
+    //console.log("RESPONSE: " + resp.body.toString('utf8'))
+    //var json = JSON.parse(resp.body.toString('utf8'))
+    if (err){
+      console.log("CANNOT POST TRANSCRIPT REQUEST")
+      var response = {}
+      response['status'] = "failed"
+      response['message'] = "Cannot call Rev AI transcript"
+      if (thisRes != null){
+        thisRes.send(JSON.stringify(response))
       }
-      //console.log("BODY: " + JSON.stringify(body))
-      var json = body.data //.toString('utf8') //.toString('utf8')
+      return
+    }
+    var response = {}
+    console.log("Job status: " + jsonBody.status)
+    if (jsonBody.status == "in_progress"){
+      var query = "UPDATE " + table + " SET processed=2 WHERE uid='" + thisId + "'";
+      pgdb.update(query, function(err, result) {
+        if (err){
+          console.error(err.message);
+        }else{
+          console.error("TRANSCRIPT IN-PROGRESS");
+        }
+      });
+      response['status'] = "in_progress"
+      response['message'] = "Transcribing ..."
+      response['uid'] = thisId
+      if (thisRes != null){
+        thisRes.send(JSON.stringify(response))
+        thisRes = null
+      }
+      console.log("BODY: " + JSON.stringify(jsonBody))
       // use webhook
       if (process.env.REVAI_CALLBACK == "WebHook"){
-        var response = {}
-        if (json.status == "in_progress"){
-          response['status'] = "in_progress"
-          response['message'] = "Transcribing ..."
-          response['uid'] = thisId
-          var query = "UPDATE " + table + " SET processed=2 WHERE uid=" + thisId;
-          pgdb.update(query, function(err, result) {
-            if (err){
-              console.error(err.message);
-            }else{
-              console.error("TRANSCRIPT IN-PROGRESS");
-            }
-          });
           var query = "INSERT INTO inprogressedtranscription"
           query += "(transcript_id, item_id, ext_id) VALUES ($1, $2, $3)"
-          var values = [json.id, thisId, extensionId]
+          var values = [jsonBody.id, thisId, extensionId]
           query += " ON CONFLICT DO NOTHING"
           console.log("SUBS: " + query)
           pgdb.insert(query, values, (err, result) =>  {
@@ -86,61 +89,43 @@ RevAIEngine.prototype = {
             console.log("register transcript_id")
           })
         }else{
-          response['status'] = "failed"
-          response['message'] = json.status
-        }
-        if (thisRes != null){
-          thisRes.send(JSON.stringify(response))
-          thisRes = null
-        }
-      }else{
-      // use wait loop for testing: 498839493
-        var jobId = json.id
-        console.log("JOB ID: " + jobId)
-        if (json.status == "in_progress"){
+        // use wait loop for testing: 498839493
+          var jobId = jsonBody.id
+          console.log("JOB ID: " + jobId)
           var timeOut = 0
-          var response = {}
-          response['status'] = "in_progress"
-          response['message'] = "Transcribing ..."
-          response['uid'] = thisId
-          var query = "UPDATE " + table + " SET processed=2 WHERE uid=" + thisId;
-          pgdb.update(query, function(err, result) {
-            if (err){
-              console.error(err.message);
-            }else{
-              console.error("TRANSCRIPT IN-PROGRESS");
-            }
-          });
-          if (thisRes != null){
-            thisRes.send(JSON.stringify(response))
-            thisRes = null
-          }
           // polling
           var interval = setInterval(function () {
-            console.log("Polling...")
-            var query = 'jobs/' + jobId
-            thisEngine.revAIClient.get(query, "", (err,resp,body) => {
-              var json = body.data
-              if (json.status == "transcribed"){
-                clearInterval(interval);
-                console.log("read transcript jobid: " + json.id)
-                //var table = "user_" + extensionId
-                //thisEngine.getTranscription(json.id, thisId, thisRes, table, thisBody)
-                thisEngine.getTranscription(json.id, thisId, thisRes, table)
-              }else if(json.status == "failed"){
-                console.log("failed transcribe")
-                clearInterval(interval);
+              console.log("Polling...")
+              var query = 'jobs/' + jobId
+              thisEngine.revAIClient.get(query, "", (err, resp, body) => {
+              if (body.status == "transcribed"){
+                  clearInterval(interval);
+                  console.log("read transcript jobid: " + body.id)
+                  //var table = "user_" + extensionId
+                  //thisEngine.getTranscription(json.id, thisId, thisRes, table, thisBody)
+                  thisEngine.getTranscription(body.id, thisId, thisRes, table)
+              }else if(body.status == "failed"){
+                  console.log("failed transcribe")
+                  console.log("RESPONSE: " + JSON.stringify(body))
+                  var query = "UPDATE " + table + " SET processed=3 WHERE uid='" + thisId + "'";
+                  pgdb.update(query, function(err, result) {
+                    if (err){
+                      console.error(err.message);
+                    }else{
+                      console.error("TRANSCRIPT IN-PROGRESS");
+                    }
+                  });
+                  clearInterval(interval);
               }
             })
           }, 10000);
-
-        }else{
-          var response = {}
-          response['status'] = json.status
-          response['message'] = 'some error from rev ai'
-          if (thisRes != null){
-            thisRes.send(JSON.stringify(response))
-          }
+        }
+      }else{
+        response['status'] = "failed"
+        response['message'] = jsonBody.status
+        if (thisRes != null){
+          thisRes.send(JSON.stringify(response))
+          thisRes = null
         }
       }
     })

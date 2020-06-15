@@ -1,4 +1,5 @@
 var watson = require('watson-developer-cloud');
+const NLUnderstandingV1 = require("ibm-watson/natural-language-understanding/v1.js")
 const pgdb = require('./db')
 
 function WatsonEngine() {
@@ -7,11 +8,11 @@ function WatsonEngine() {
     password: process.env.WATSON_PWD,
     url: 'https://stream.watsonplatform.net/speech-to-text/api/'
   });
-  this.nlu = new watson.NaturalLanguageUnderstandingV1({
-    "url": "https://gateway.watsonplatform.net/natural-language-understanding/api",
-    "username": process.env.WATSON_ANALYTIC_USERNAME,
-    "password": process.env.WATSON_ANALYTIC_PWD,
-    'version': '2018-03-16'
+
+  this.nlu = new NLUnderstandingV1({
+    version: '2019-07-12',
+    iam_apikey: process.env.WATSON_NLU_API_KEY,
+    url: 'https://gateway.watsonplatform.net/natural-language-understanding/api'
   });
   return this
 }

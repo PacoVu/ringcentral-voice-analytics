@@ -225,7 +225,7 @@
               </td>
               <td width="10%" class="td-active">
                 <!--div><%= calls[i]['full_name'] %></div-->
-                <% if (calls[i].direction == "Out") { %>
+                <% if (calls[i].direction == "out") { %>
                   <% if (calls[i]['from_name'] != "Unknown") { %>
                     <% if (calls[i]['from_number'] != "Unknown #") { %>
                       <div><a href="rcmobile://call?number=<%= calls[i]['from_number'] %>"><%= calls[i]['from_name'] %></a></div>

@@ -2,13 +2,19 @@ PORT=8080
 PRINT_LOG=yes
 ADMIN=admin
 MODE=sandbox
+TRANSCRIPT_ENGINE=REV-AI
 
 PGHOST=localhost
-PGUSER=phong.vu
+PGUSER=user_name
 PGDATABASE=users
 PGPASSWORD=
 PGPORT=5432
 
+FORCETODELETEUSERTABLE=0
+REVAI_CALLBACK=Polling
+REVAI_WEBHOOK_ADDRESS=https://c5eed954eead.ngrok.io/revaitranscriptcallback
+DELIVERY_MODE_ADDRESS=https://c5eed954eead.ngrok.io/webhooks
+DELIVERY_MODE_TRANSPORT_TYPE=WebHook
 
 CLIENT_ID_SB=sanbox
 CLIENT_SECRET_SB=sandbox
@@ -22,9 +28,8 @@ RC_APP_REDIRECT_URL=http://localhost:8080/oauth2callback
 WATSON_USERNAME=username
 WATSON_PWD=password
 
-WATSON_ANALYTIC_USERNAME=username
-WATSON_ANALYTIC_PWD=password
+WATSON_NLU_API_KEY=your-watson-apikey
+
+REVAI_APIKEY=your-revai-apikey
 
 GOOGLE_APPLICATION_CREDENTIALS=ornate-destiny-209015-0737a9e7196c.json
-
-HOD_APIKEY=apikey

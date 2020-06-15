@@ -367,230 +367,6 @@ User.prototype = {
           this.readFullData(nextQuery, retObj, res, field, keyword)
       });
     },
-    /*
-    subscribeForNotification: function (req){
-      // read subId form database
-      var thisUser = this
-      var selectedExtensionList = []
-      if (req.body.extensionList != undefined){
-        var extList = JSON.parse(req.body.extensionList)
-        if (extList.length == 0){
-          for (var ext of this.extensionList){
-            if (this.extensionId == ext.id){
-              selectedExtensionList.push(ext)
-              break
-            }
-          }
-        }else{
-          for (var item of extList){
-            for (var ext of this.extensionList){
-              if (item == ext.id){
-                selectedExtensionList.push(ext)
-                break
-              }
-            }
-          }
-        }
-      }else{
-        selectedExtensionList = this.extensionList
-      }
-      var query = "SELECT * FROM " + this.getSubscriptionIdTable() + " WHERE ext_id=" + this.getExtensionId();
-      pgdb.read(query, (err, result) => {
-        console.log(result)
-        if(err != null){
-          console.log(err);
-        }
-        if (result.rows.length == 0){
-          console.log("no subId found. create one after")
-          //var extensionList = thisUser.getExtensionList()
-          //var extensionList = JSON.parse(req.body.extensionList)
-          thisUser.rc_platform.subscribeForNotification(selectedExtensionList, thisUser.isAdmin(), function(err, result){
-            console.log("subscribed ID: " + result)
-            if (!err){
-              var query = "INSERT INTO " + thisUser.getSubscriptionIdTable()
-              query += "(ext_id, sub_id, autotranscribe)"
-              query += " VALUES ($1, $2, $3)"
-              var values = [thisUser.getExtensionId(), result, true]
-              query += " ON CONFLICT DO NOTHING"
-              console.log("SUBS: " + query)
-              pgdb.insert(query, values, (err, result) =>  {
-                if (err){
-                  console.error(err.message);
-                }
-                console.log("register subId: " + result)
-              })
-            }
-          })
-        }else{
-          // found the subId, use it to check and renew
-          var subId = result.rows[0].sub_id
-          if (subId == ''){
-            console.log("empty subID")
-            var extensionList = thisUser.getExtensionList()
-            thisUser.rc_platform.subscribeForNotification(selectedExtensionList, thisUser.isAdmin(), function(err, result){
-              if (!err){
-                var query = "UPDATE " + thisUser.getSubscriptionIdTable() + " SET sub_id='" + result + "'"
-                query += " WHERE ext_id=" + thisUser.getExtensionId();
-                console.log("UPDATING SUB ID: " + query)
-                pgdb.update(query, (err, result) => {
-                  if (err){
-                    return console.log("CANNOT UPDATE SUB ID" + err.message);
-                  }else{
-                    return console.log("RESUBSCRIBE SUBSCRIPTION: " + JSON.stringify(result))
-                  }
-                });
-              }
-            })
-          }else{
-            console.log("SAVED SUBSCRIPTION ID: " + subId)
-            //thisUser.rc_platform.renewSubscription(subId, function(err, result){
-            thisUser.rc_platform.removeOrphanSubscription(subId, function(err, result){
-              console.log("REMOVE OLD SUBSCRIPTION")
-              if (!err){
-                var extensionList = thisUser.getExtensionList()
-                thisUser.rc_platform.subscribeForNotification(selectedExtensionList, thisUser.isAdmin(), function(err, result){
-                  if (!err){
-                    var query = "UPDATE " + thisUser.getSubscriptionIdTable() + " SET sub_id='" + result + "'"
-                    query += " WHERE ext_id=" + thisUser.getExtensionId();
-                    console.log("UPDATING SUB ID: " + query)
-                    pgdb.update(query, (err, result) => {
-                      if (err){
-                        return console.log("CANNOT UPDATE SUB ID" + err.message);
-                      }else{
-                        return console.log("RESUBSCRIBE SUBSCRIPTION: " + JSON.stringify(result))
-                      }
-                    });
-                  }
-                })
-              }else{
-                console.log("PLATFORM PROBLEM:" + err.message)
-              }
-            })
-          }
-        }
-      });
-    },
-    removeSubscription: function() {
-      //this.rc_platform.removeAllSubscriptions()
-      //return
-      var thisUser = this
-      var query = "SELECT * FROM " + this.getSubscriptionIdTable() + " WHERE ext_id=" + this.getExtensionId();
-      pgdb.read(query, (err, result) => {
-        //console.log(result.rows)
-        if(err != null){
-          return console.log(err);
-        }
-        if (result.rows.length == 0){
-          console.log("no subId found. don't know what subscription to delete")
-        }else{
-          // found the subId, use it to check and renew
-          var subId = result.rows[0].sub_id
-          console.log("subId found: " + subId)
-          thisUser.rc_platform.removeSubscription(subId, function(err, result){
-            console.log("REMOVE SUBSCRIPTION")
-            if (!err){
-              var query = "UPDATE " + thisUser.getSubscriptionIdTable() + " SET sub_id=''"
-              query += " WHERE ext_id=" + thisUser.getExtensionId();
-              console.log("REMOVE SUBS: " + query)
-              pgdb.update(query, (err, result) => {
-                if (err){
-                  return console.error(err.message);
-                }else{
-                  return console.error(JSON.stringify(result))
-                }
-              });
-            }else{
-              console.log("PLATFORM PROBLEM:" + err.message)
-              var query = "UPDATE " + thisUser.getSubscriptionIdTable() + " SET sub_id=''"
-              query += " WHERE ext_id=" + thisUser.getExtensionId();
-              console.log("REMOVE SUBS: " + query)
-              pgdb.update(query, (err, result) => {
-                if (err){
-                  return console.error(err.message);
-                }else{
-                  return console.error(JSON.stringify(result))
-                }
-              });
-            }
-          })
-        }
-      });
-    },
-    notificationHandler: function(msg){
-      console.log("CALLBACK FROM PLATFORM: " + JSON.stringify(msg))
-      if (msg.event.indexOf('message-store') > 0){
-        console.log("message-store type: " + msg.body.changes[0].type)
-        if (msg.body.changes[0].type == "VoiceMail" && msg.body.changes[0].newCount > 0){
-          return this.notificationUser.hasMissedCall = true
-        }
-        //if (msg.body.changes[0].type == "VoiceMail" && (msg.body.changes[0].newCount > 0 || msg.body.changes[0].updatedCount > 0)){
-        if (msg.body.changes[0].type == "VoiceMail" && msg.body.changes[0].updatedCount > 0){
-          if (this.notificationUser.hasMissedCall == true) {
-            var date = new Date()
-            var time = date.getTime()
-            var moreXXSeconds = time + (36 * 1000) //+ (3600 * 8)
-            var toDate = new Date(moreXXSeconds)
-            var stopTime = toDate.toISOString()
-            stopTime = stopTime.replace('/', ':')
-            console.log("END TIME: " + stopTime)
-            var extId = msg.body.extensionId
-            //var startTime = this.notificationUser.startTime
-            this.notificationUser.stopTime = stopTime
-            this.notificationUser.callRecording = false
-            this.notificationUser.hasMissedCall = false
-            var thisUser = this
-            setTimeout(function(){
-              thisUser.readExtensionCallLogs(extId)
-            }, 5000)
-          }
-        }
-        console.log("BODY: " + JSON.stringify(msg.body))
-      }else if (msg.event.indexOf('presence') > 0){
-        this.notificationUser.extensionId = msg.body.extensionId
-        var newTelephonyStatus = msg.body.telephonyStatus
-        console.log("stored: " + this.notificationUser.telephonyStatus)
-        console.log("new   : " + newTelephonyStatus)
-        if (this.notificationUser.telephonyStatus == "NoCall" && newTelephonyStatus == "Ringing"){
-          this.notificationUser.telephonyStatus = newTelephonyStatus
-          var date = new Date()
-          var time = date.getTime()
-          var lessXXSeconds = time - (36 * 1000)// + (3600 * 8)
-          var from = new Date(lessXXSeconds)
-          var dateFrom = from.toISOString()
-          this.notificationUser.startTime = dateFrom.replace('/', ':')
-          console.log("START TIME: " + this.notificationUser.startTime)
-          console.log("this extensionId " + this.notificationUser.extensionId + " has an incoming call")
-        }
-        else if (this.notificationUser.telephonyStatus == "Ringing" && newTelephonyStatus == "CallConnected"){
-          this.notificationUser.telephonyStatus = newTelephonyStatus
-          //this.notificationUser.hasMissedCall = false
-          console.log("this extensionId " + this.notificationUser.extensionId + " has a accepted a call")
-        }
-        else if (this.notificationUser.telephonyStatus == "Ringing" && newTelephonyStatus == "NoCall"){
-          this.notificationUser.telephonyStatus = newTelephonyStatus
-          //this.notificationUser.hasMissedCall = true
-          console.log("this extensionId " + this.notificationUser.extensionId + " has a missed call")
-        }
-        else if (this.notificationUser.telephonyStatus == "CallConnected" && newTelephonyStatus == "NoCall"){
-          this.notificationUser.telephonyStatus = newTelephonyStatus
-          console.log("this extensionId " + this.notificationUser.extensionId + " has terminated a call")
-          // now cause a 30 sec delay then check for call recordings
-          var date = new Date()
-          var stopTime = date.toISOString()
-          stopTime = stopTime.replace('/', ':')
-          console.log("END TIME: " + stopTime)
-          this.notificationUser.stopTime = stopTime
-          this.notificationUser.callRecording = true
-          var thisUser = this
-          setTimeout(function(){
-            thisUser.readExtensionCallLogs(thisUser.notificationUser.extensionId)
-          }, 20000)
-        } else {
-          this.notificationUser.telephonyStatus = newTelephonyStatus
-        }
-      }
-    },
-    */
     // WEBHOOK
     subscribeForNotification: function (req, res){
       // read subId form database
@@ -619,11 +395,8 @@ User.prototype = {
       }
       var thisRes = res
       var thisUser = this
-      //thisRes.send('{"result":"ok"}')
-      console.log("EXT ID: " + this.getExtensionId())
       var query = "SELECT * FROM " + this.getSubscriptionIdTable() + " WHERE ext_id=" + this.getExtensionId();
       pgdb.read(query, (err, result) => {
-        console.log(result.rows)
         if(err != null){
           console.log(err);
         }
@@ -635,14 +408,12 @@ User.prototype = {
             console.log("RETURNED EXT ID: " + thisUser.getExtensionId())
             if (!err){
               thisRes.send('{"result":"ok"}')
-
               var query = "INSERT INTO " + thisUser.getSubscriptionIdTable()
               query += "(ext_id, sub_id, autotranscribe)"
               query += " VALUES ($1, $2, $3)"
               var extId = thisUser.getExtensionId()
               var values = [extId, subId, true]
               query += " ON CONFLICT DO NOTHING"
-              console.log("SUBS: " + query)
               pgdb.insert(query, values, (err, result) =>  {
                 if (err){
                   console.error(err.message);
@@ -656,10 +427,7 @@ User.prototype = {
         }else{
           // found the subId, use it to check and renew
           var subId = result.rows[0].sub_id
-          console.log("subId :" + subId)
           if (subId == ''){
-            console.log("empty subID")
-            //var extensionList = thisUser.getExtensionList()
             thisUser.rc_platform.subscribeForNotification(selectedExtensionList, thisUser.isAdmin(), function(err, subId){
               console.log("RETURNED EXT ID: " + thisUser.getExtensionId())
               if (!err){
@@ -680,11 +448,10 @@ User.prototype = {
               }
             })
           }else{
-            console.log("SAVED SUBSCRIPTION ID: " + subId) //JSON.stringify(subId))
+            console.log("SAVED SUBSCRIPTION ID: " + subId)
             thisUser.rc_platform.removeOrphanSubscription(subId, function(err, result){
               console.log("OLD ORPHANED SUBSCRIPTION REMOVED")
               if (!err){
-                //var extensionList = thisUser.getExtensionList()
                 thisUser.rc_platform.subscribeForNotification(selectedExtensionList, thisUser.isAdmin(), function(err, subId){
                   if (!err){
                     thisRes.send('{"result":"ok"}')
@@ -713,16 +480,11 @@ User.prototype = {
       });
     },
     removeSubscription: function(res) {
-      //this.rc_platform.removeAllSubscriptions()
-      //return
-      //console.log(res)
       var thisRes = res
-      //res.send('{"result":"ok"}')
       var thisUser = this
       var extId = thisUser.getExtensionId()
       var query = "SELECT * FROM " + this.getSubscriptionIdTable() + " WHERE ext_id=" + extId;
       pgdb.read(query, (err, result) => {
-        //console.log(result.rows)
         if(err != null){
           thisRes.send('{"result":"failed"}')
           return console.log(err);
@@ -767,17 +529,11 @@ User.prototype = {
       });
     },
     handleWebhooksPost: function(msg) {
-      //console.log("CALLBACK FROM WebHook: " + JSON.stringify(msg))
-      //var extId = msg.body.extensionId
       var thisUser = this
       if (msg.event.indexOf('message-store') > 0){
-        console.log("message-store type: " + msg.body.changes[0].type)
-        console.log("BODY: " + JSON.stringify(msg.body))
-        //console.log("MSG: " + JSON.stringify(msg))
         if (msg.body.changes[0].type == "VoiceMail" && msg.body.changes[0].newCount > 0){
           return this.notificationUser.hasMissedCall = true
         }
-        //if (msg.body.changes[0].type == "VoiceMail" && (msg.body.changes[0].newCount > 0 || msg.body.changes[0].updatedCount > 0)){
         if (msg.body.changes[0].type == "VoiceMail" && msg.body.changes[0].updatedCount > 0){
           if (this.notificationUser.hasMissedCall == true) {
             var date = new Date()
@@ -802,8 +558,6 @@ User.prototype = {
       }else if (msg.event.indexOf('presence') > 0){
         this.notificationUser.extensionId = msg.body.extensionId
         var newTelephonyStatus = msg.body.telephonyStatus
-        console.log("stored: " + this.notificationUser.telephonyStatus)
-        console.log("new   : " + newTelephonyStatus)
         if (this.notificationUser.telephonyStatus == "NoCall" && newTelephonyStatus == "Ringing"){
           this.notificationUser.telephonyStatus = newTelephonyStatus
           var date = new Date()
@@ -903,20 +657,17 @@ User.prototype = {
       params['dateTo'] = this.notificationUser.stopTime
       if (this.notificationUser.callRecording)
         params['recordingType'] = 'All' //withCallRecording
-      //console.log(JSON.stringify(params))
+
       var p = this.getPlatform()
-      //console.log(endpoint)
       var thisUser = this
       p.get(endpoint, params)
       .then(function(resp){
         var json = resp.json()
-        //console.log("RESPONSE: " + JSON.stringify(json))
         if (json.records.length == 0){
           return
         }
         async.each(json.records,
           function(record, callback){
-            //console.log("RECORD: " + JSON.stringify(record))
             var item = {}
             if (record.hasOwnProperty("message") && record.message.type == "VoiceMail"){
               item['call_type'] = "VM"
@@ -983,12 +734,6 @@ User.prototype = {
               }
             }
             var query = "INSERT INTO " + thisUser.getUserTable()
-            /*
-            query += "(uid, rec_id, call_date, call_type, extension_num, full_name, from_number, from_name, to_number, to_name, recording_url, duration, direction, processed, wordsandoffsets, transcript, conversations, sentiments, sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, profanities, keywords, entities, concepts, categories, actions)"
-            query += " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)"
-            var values = [item['uid'], item['rec_id'],item['call_date'],item['call_type'],item['extension_num'],item['full_name'],item['from_number'],item['from_name'],item['to_number'],item['to_name'],item['recording_url'],item['duration'],item['direction'],0,"","","","","",0,0,0,0,"","","","","",""]
-            query += " ON CONFLICT DO NOTHING"
-            */
             query += "(uid, rec_id, call_date, call_type, extension_id, extension_num, full_name, from_number, from_name, to_number, to_name, recording_url, duration, direction, processed, wordsandoffsets, transcript, conversations, sentiments, sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, profanities, keywords, entities, concepts, categories, actions, subject)"
             query += " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,$28,$29,$30,$31)"
             var values = [item['uid'], item['rec_id'],item['call_date'],item['call_type'],item['extension_id'],item['extension_num'],item['full_name'],item['from_number'],item['from_name'],item['to_number'],item['to_name'],item['recording_url'],item['duration'],item['direction'],0,"","","","","",0,0,0,0,"","","","","","",""]
@@ -1013,7 +758,6 @@ User.prototype = {
           if (err.includes("ReadCompanyCallLog")){
             errorRes['calllog_error'] = "You do not have admin role to access account level. You can choose the extension access level."
             console.log(errorRes['calllog_error'])
-            //thisRes.send(JSON.stringify(errorRes))
           }else{
             errorRes['calllog_error'] = "Cannot access call log."
             console.log(errorRes['calllog_error'])
@@ -1040,17 +784,14 @@ User.prototype = {
             var stream = require('stream');
             var bufferStream = new stream.PassThrough();
             bufferStream.end(buffer);
-            console.log("CALL Watson?")
             var watson = new WatsonEngine()
             watson.transcribe(table, null, body, bufferStream)
-            //watson.transcribe("demos", res, body, fs.createReadStream(audioSrc))
           })
           .catch(function(e){
             console.log(e)
             throw e
           })
         }else if (process.env.TRANSCRIPT_ENGINE == "REV-AI"){
-          console.log("CALL Rev AI?")
           var revai = new RevAIEngine()
           revai.transcribe(table, null, body, recordingUrl, thisUser.getExtensionId())
         }
@@ -1058,7 +799,6 @@ User.prototype = {
     removeItemFromDB: function(req, res){
       var thisRes = res
       var query = "DELETE FROM " + this.getUserTable() + " WHERE uid=" + req.body.id;
-      //console.log(query)
       pgdb.remove(query, function (err, result) {
         if (err){
           thisRes.send('{"status":"error"}')
@@ -1066,29 +806,11 @@ User.prototype = {
         }
         thisRes.send('{"status":"ok"}')
       });
-      /*
-      var thisRes = res
-      var thisUser = this
-      var json = JSON.parse(req.body.calls)
-      async.each(json,
-        function(item, callback){
-          var query = "DELETE FROM " + thisUser.getUserTable() + " WHERE uid=" + item.id;
-          pgdb.remove(query, function (err, result) {
-            callback(null, result)
-          });
-        },
-        function (err){
-          console.log("remove done")
-          thisRes.send('{"status":"ok"}')
-        })
-      */
     },
     deleteItemFromCallLogDb: function(req, res){
       var thisRes = res
       var thisReq = req
       var thisUser = this
-      //console.log(req.body.id)
-      //console.log(req.body.rec_id)
       var json = JSON.parse(req.body.calls)
       var p = thisUser.getPlatform()
       var table = thisUser.getUserTable()
@@ -1123,49 +845,6 @@ User.prototype = {
           thisRes.send('{"status":"ok"}')
         })
     },
-    /*
-    deleteItemFromCallLogDb: function(req, res){
-      var thisRes = res
-      var thisReq = req
-      //console.log(req.body.id)
-      //console.log(req.body.rec_id)
-      if (req.body.type == "PR"){
-        var query = "DELETE FROM " + this.getUserTable() + " WHERE uid=" + req.body.id;
-        //console.log(query)
-        pgdb.remove(query, function (err, result) {
-          if (err){
-            thisRes.send('{"status":"error"}')
-            return console.error(err.message);
-          }
-          thisRes.send('{"status":"ok"}')
-        });
-      }else{
-        var endpoint = '/restapi/v1.0/account/~/call-log/' + req.body.rec_id
-        if (!this.isAdmin())
-          endpoint = '/restapi/v1.0/account/~/extension/~/call-log/' + req.body.rec_id
-        var p = this.getPlatform()
-        var table = this.getUserTable()
-        p.delete(endpoint)
-          .then(function(){
-            var query = "DELETE FROM " + table + " WHERE uid=" + req.body.id;
-            //console.log(query)
-            pgdb.remove(query, function (err, result) {
-              if (err){
-                thisRes.send('{"status":"error"}')
-                return console.error(err.message);
-              }
-              //engine.loadCallsFromDB(req, res)
-              thisRes.send('{"status":"ok"}')
-            });
-          })
-          .catch(function(e){
-            console.log(e)
-            //engine.loadCallsFromDB(req, res)
-            thisRes.send('{"status":"error"}')
-          })
-      }
-    },
-    */
     createRecord: function(req, res){
       var item = {}
       item['from_number'] = "+16502245476"
@@ -1210,29 +889,24 @@ User.prototype = {
           var watson = new WatsonEngine()
           watson.transcribe(table, res, req.body, fs.createReadStream(audioSrc))
         }else if (process.env.TRANSCRIPT_ENGINE == "REV-AI"){
-          console.log("call REV-AI to transcribe PR")
           var revai = new RevAIEngine()
           revai.transcribe(table, res, body, audioSrc, this.getExtensionId())
         }
       }else {
         console.log("call REV-AI to transcribe VM or CR")
         var p = this.getPlatform()
-        //var obj = req.body
         var thisRes = res
         var thisUser = this
         var recordingUrl = p.createUrl(req.body.recordingUrl, {addToken: true});
-        //console.log("callRecordingUrl: " + recordingUrl)
         if (process.env.TRANSCRIPT_ENGINE == "WATSON"){
           p.get(recordingUrl)
             .then(function(res) {
-              //console.log("ok")
               return res.response().buffer();
             })
             .then(function(buffer) {
               var stream = require('stream');
               var bufferStream = new stream.PassThrough();
               bufferStream.end(buffer);
-              //watson.transcribe(table, thisRes, req.body, bufferStream)
               var watson = new WatsonEngine()
               watson.transcribe(table, thisRes, req.body, bufferStream)
             })
@@ -1240,7 +914,6 @@ User.prototype = {
               console.log(e)
             })
         }else if (process.env.TRANSCRIPT_ENGINE == "REV-AI"){
-          console.log("call revai")
           var revai = new RevAIEngine()
           revai.transcribe(table, thisRes, req.body, recordingUrl, this.getExtensionId())
         }
@@ -1401,18 +1074,10 @@ User.prototype = {
           }
         }
         console.log(JSON.stringify(refKeywords))
-
         res.send('{"status":"OK"}')
-        /*
-        res.render('recordedcall', {
-          results: result,
-          searchWord: req.body.searchWord
-        })
-        */
       });
     },
     searchCallsFromDB: function(req, res){
-      console.log(JSON.stringify(req.body))
       var query = "SELECT uid, rec_id, call_date, call_type, extension_num, full_name, recording_url, processed, from_number, from_name, to_number, to_name, sentiment_label, conversations, keywords, sentiments, direction, duration, subject FROM " + this.getUserTable()
       var filterQuery = "true"
       var searchQuery = ""
@@ -1436,42 +1101,29 @@ User.prototype = {
             filterQuery += " AND categories LIKE '%" + escape(req.body.categories) + "%'"
         }
       }
-      //query += filterQuery
       var searchArg = req.body.search.trim()
       if (!searchArg) {
         searchArg = '*';
       }
       // check if needed processed field
-      //if (req.body.fields == "all" OR req.body.fields == "transcript" OR req.body.fields == "all")
       if (req.body.fields == "all"){
         if (searchArg != "*") {
-            //query += "processed=1 AND ("
             searchQuery += "(transcript ILIKE '%" + searchArg + "%' OR "
-            //searchQuery += "to_tsvector('simple', 'transcript') @@ to_tsquery('simple', '" + searchArg + ")"
             searchQuery += "keywords ILIKE '%" + searchArg + "%' OR "
-            //searchQuery += "concepts ILIKE '%" + searchArg + "%' OR "
             searchQuery += "from_number ILIKE '%" + searchArg + "%' OR "
             searchQuery += "from_name ILIKE '%" + searchArg + "%' OR "
             searchQuery += "to_number ILIKE '%" + searchArg + "%' OR "
             searchQuery += "to_name ILIKE '%" + searchArg + "%')"
-            //searchQuery += "extension_num ILIKE '%" + searchArg + "%')"
-            //searchQuery += "categories ILIKE '%" + searchArg + "%')"
         }
       }else if (req.body.fields == "transcript"){
         searchQuery += "processed=1"
         if (searchArg != "*") {
           searchQuery += " AND transcript ILIKE '%" + searchArg + "%'";
-          //searchQuery += " AND to_tsvector('simple', string) @@ to_tsquery('simple', '" + searchArg + ")"
-          //searchQuery += " OR transcript ILIKE '%" + escape(searchArg) + "%'";
-          //searchQuery += " OR transcript ILIKE '%" + escape(searchArg) + "%20%')";
         }
       }else if (req.body.fields == "keywords"){
         searchQuery += "processed=1"
         if (searchArg != "*") {
-          //searchQuery += " AND keywords ILIKE '%" + searchArg + "%'";
           searchQuery += " AND keywords ILIKE '%" + searchArg + "%'";
-          //searchQuery += " OR keywords ILIKE '%%20" + escape(searchArg) + "%'";
-          //searchQuery += " OR keywords ILIKE '%" + escape(searchArg) + "%20%')";
         }
       }else if (req.body.fields == "from"){
         if (searchArg != "*") {
@@ -1482,13 +1134,6 @@ User.prototype = {
           searchQuery += "to_number ILIKE '%" + searchArg + "%' OR to_name ILIKE '%" + searchArg + "%'"
         }
       }
-      /*
-      else if (req.body.fields == "extension"){
-        if (searchArg != "*") {
-          searchQuery += "extension_num='" + searchArg + "'";
-        }
-      }
-      */
       if (req.body.extensionnumbers != undefined){
         if (Array.isArray(req.body.extensionnumbers)){
           var count = req.body.extensionnumbers.length
@@ -1516,9 +1161,6 @@ User.prototype = {
         else
           query +=  " AND " + searchQuery
       }
-      // console.log(filterQuery)
-      // console.log(searchQuery)
-      // console.log(query)
       var retObj = {}
       retObj['catIndex'] = req.body.categories
       retObj['searchArg'] = searchArg
@@ -1526,8 +1168,6 @@ User.prototype = {
       retObj['fieldArg'] = req.body.fields
       retObj['typeArg'] = req.body.types
       retObj['extensionArgs'] = req.body.extensionnumbers || []
-      //retObj['posVal'] = req.body.positiveRange
-      //retObj['negVal'] = req.body.negativeRange
       if (this.categoryList.length == 0){
         this.readCategories(query, retObj, res, searchArg)
       }else{
@@ -1547,21 +1187,18 @@ User.prototype = {
           rows[i].sentiments = unescape(r.sentiments)
           rows[i].keywords = unescape(r.keywords)
           rows[i].concepts = unescape(r.concepts)
-          //console.log("FOUND KW: " + rows[i].keywords)
           if (retObj.searchArg != "*"){
             if (field != null && field == 'keywords'){
               rows[i]['searchMatch'] = JSON.stringify([])
               var searchMatchArr = []
-              var keywordArr = JSON.parse(rows[i].keywords) //unescape(r.keywords))
+              var keywordArr = JSON.parse(rows[i].keywords)
               for (var keyword of keywordArr){
                 var regEx = new RegExp(retObj.searchArg, "i");
-                //if (keyword.text.indexOf(retObj.searchArg) >= 0 ){
                 if (keyword.text.search(regEx) >= 0) {
                   console.log(retObj.searchArg + " == " + keyword.text)
                   console.log(keyword.text.search(regEx))
                   searchMatchArr.push('<span class="search-highlight">' + keyword.text + "</span>")
                   if (searchMatchArr.length > 4 || searchMatchArr.length == keywordArr.length){
-                    //rows[i]['searchMatch'] = JSON.stringify(searchMatchArr)
                     break
                   }
                 }else{
@@ -1569,14 +1206,12 @@ User.prototype = {
                     console.log("Add extra keywords")
                     searchMatchArr.push(keyword.text)
                   }if (searchMatchArr.length > 4 || searchMatchArr.length == keywordArr.length){
-                    //rows[i]['searchMatch'] = JSON.stringify(searchMatchArr)
                     break
                   }
                 }
               }
               if (searchMatchArr.length > 0)
                 rows[i]['searchMatch'] = JSON.stringify(searchMatchArr)
-              //console.log(rows[i]['searchMatch'])
             }else{
               rows[i]['searchMatch'] = ""
               const MAX_LENGTH = 90
@@ -1645,64 +1280,12 @@ User.prototype = {
               var regEx = new RegExp(retObj.searchArg, "ig");
               var hightlightTruncatedText = truncatedText.replace(regEx, '<span class="search-highlight">' + retObj.searchArg + "</span>")
 
-              //rows[i]['searchMatch'] = rows[i]['searchMatch'].trim()
-
               rows[i]['searchMatch'] = hightlightTruncatedText
               rows[i].conversations = "{}"
             }
           }
-
-          //console.log(rows[i].concepts)
-          //console.log(rows[i].keywords)
-          /*
-          if (field != null && field == 'keywords'){
-            var kwObj = JSON.parse(unescape(r.keywords))
-            for (var kw of kwObj){
-              if (kw.text == keyword){
-                rows[i]['score'] = kw.relevance
-                break
-              }
-            }
-          }
-          */
         }
-        /*
-        if (field != null && field == 'keywords'){
-          console.log("search keywords")
-          for (var i = 0; i < rows.length; i++){
-            var r = rows[i]
-            rows[i].sentiments = unescape(r.sentiments)
-            var kwObj = JSON.parse(unescape(r.keywords))
-            for (var kw of kwObj){
-              if (kw.text == keyword){
-                rows[i]['score'] = kw.relevance
-                break
-              }
-            }
-          }
-          //console.log("BEFORE: " + JSON.stringify(rows))
-          rows.sort(sortScores)
-          //console.log("AFTER: " + JSON.stringify(rows))
-        }
-        */
-        //else
-          rows.sort(sortDates)
-          /* dont need as recording cannot be listened from the calls list
-          // url need token when transcribes though
-          var p = this.getPlatform()
-          for (var i=0; i<rows.length; i++){
-            if (rows[i].call_type == "CR" || rows[i].call_type == "VM"){
-              rows[i].recording_url = p.createUrl(rows[i].recording_url, {addToken: true});
-            }
-          }
-          */
-
-        //console.log(rows)
-
-        //if (users[index].getUserId() == 100)
-        //  userLevel = 'demo'
-        //console.log(JSON.stringify(retObj))
-        // add comments
+        rows.sort(sortDates)
         res.render('recordedcalls', {
             calls: rows,
             companyNumber: this.getMainCompanyNumber(),
@@ -1721,7 +1304,6 @@ User.prototype = {
       });
     },
     loadCallsFromDB: function(req, res){
-      //var query = "SELECT uid, rec_id, call_date, call_type, extension_num, full_name, recording_url, transcript, processed, from_number, from_name, to_number, to_name,sentiment_label, sentiment_score_hi, sentiment_score_low, has_profanity, sentiments FROM " + this.getUserTable();
       var query = "SELECT uid, rec_id, call_date, call_type, extension_num, full_name, recording_url, processed, from_number, from_name, to_number, to_name,sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, keywords, sentiments, direction, duration, subject, concepts FROM " + this.getUserTable();
       var retObj = {}
       retObj['catIndex'] = ''
@@ -1730,8 +1312,6 @@ User.prototype = {
       retObj['fieldArg'] = 'all'
       retObj['typeArg'] = ''
       retObj['extensionArgs'] = []
-      //retObj['posVal'] = 0
-      //retObj['negVal'] = 0
       if (this.categoryList.length == 0){
         this.readCategories(query, retObj, res, null, "")
       }else{
@@ -1741,13 +1321,11 @@ User.prototype = {
     },
     readExtensionCallLog: function(body, extList, res){
       var ext = extList[this.extIndex]
-
       var endpoint = '/account/~/extension/'+ ext.id +'/call-log'
-      //console.log("Ext Id: " + ext.id)
       var thisBody = body
       var thisRes = res
       var thisUser = this
-      //console.log("DATE: " + body.dateFrom + "/" + body.dateTo)
+
       var params = {
         view: "Detailed",
         dateFrom: body.dateFrom,
@@ -1769,12 +1347,8 @@ User.prototype = {
               console.log('Something is wrong!');
             }
             thisUser.extIndex++
-            console.log('read next extension.. ' + extList.length);
-            console.log("EXT IND: " + thisUser.extIndex)
-
             if (thisUser.extIndex < extList.length){
               setTimeout(function(){
-                console.log("read from timer")
                 thisUser.readExtensionCallLog(body, extList, res)
               }, 1000)
             }else{
@@ -1844,9 +1418,7 @@ User.prototype = {
                   item['from_number'] = "Unknown #"
                   item['from_name'] = "Unknown"
                 }
-                //console.log("DATE: " + new Date(record.startTime).getTime())
                 item['call_date'] = new Date(record.startTime).getTime() - (8*3600*1000)
-                //console.log("Converted DATE: " + item['call_date'])
                 item['processed'] = false
                 item['rec_id'] = record.id
                 item['duration'] = record.duration
@@ -1864,12 +1436,12 @@ User.prototype = {
                     }
                   }
                 }
+                //console.log(JSON.stringify(item))
                 var query = "INSERT INTO " + table
                 query += "(uid, rec_id, call_date, call_type, extension_id, extension_num, full_name, from_number, from_name, to_number, to_name, recording_url, duration, direction, processed, wordsandoffsets, transcript, conversations, sentiments, sentiment_label, sentiment_score, sentiment_score_hi, sentiment_score_low, has_profanity, profanities, keywords, entities, concepts, categories, actions, subject)"
                 query += " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,$28,$29,$30,$31)"
                 var values = [item['uid'], item['rec_id'],item['call_date'],item['call_type'],item['extension_id'],item['extension_num'],item['full_name'],item['from_number'],item['from_name'],item['to_number'],item['to_name'],item['recording_url'],item['duration'],item['direction'],0,"","","","","",0,0,0,0,"","","","","","",""]
                 query += " ON CONFLICT DO NOTHING"
-                //setTimeout(function(){
                 pgdb.insert(query, values, (err, result) =>  {
                   if (err)
                     console.error("INSERT ERR: " + err.message);
@@ -1877,10 +1449,8 @@ User.prototype = {
                   var q = "CREATE INDEX " + table + "_fts_ind ON " + table + " USING gin (to_tsvector('simple', string))"
                   return callback0(null, result)
                 })
-                //}, 1000)
               },
               function (err){
-                //console.log("function err")
                 return callback (null, json);
               })
             })

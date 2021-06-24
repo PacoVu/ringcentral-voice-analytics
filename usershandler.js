@@ -1454,7 +1454,7 @@ User.prototype = {
                 return callback (null, json);
               })
             })
-            .catch(function(e){
+          .catch(function(e){
               var errorRes = {}
               var err = e.toString();
               if (err.includes("ReadCompanyCallLog")){
@@ -1465,7 +1465,7 @@ User.prototype = {
                 thisRes.send(JSON.stringify(errorRes))
               }
               console.log(err)
-            })
+          })
        }
     }
 }
@@ -1484,83 +1484,9 @@ function dropTable(table, callback){
     }
   })
 }
-/*
-function createTable(table, callback) {
-  console.log("CREATE TABLE: " + table)
-  if (table.indexOf('user_') >= 0) {
-    var query = "SELECT subject FROM " + table;
-    pgdb.read(query, (err, result) => {
-      if(err != null){
-        // not exist => drop old table
-        console.log("err: drop old table")
-        dropTable(table, (err, res) => {
-          if (!err){
-            pgdb.create_table(table, (err, res) => {
-              if (err) {
-                console.log(err, res)
-                callback(err, err.message)
-                copyTable(table)
-              }else{
-                console.log("DONE")
-                callback(null, "Ok")
-                if (table.indexOf('user_') >= 0)
-                  copyTable(table)
-              }
-            })
-          }
-        })
-      }else{
-        if (result.rows.length == 0){
-          console.log("empty: drop old table")
-          dropTable(table, (err, res) => {
-            if (!err){
-              pgdb.create_table(table, (err, res) => {
-                if (err) {
-                  console.log(err, res)
-                  callback(err, err.message)
-                  copyTable(table)
-                }else{
-                  console.log("DONE")
-                  callback(null, "Ok")
-                  if (table.indexOf('user_') >= 0)
-                    copyTable(table)
-                }
-              })
-            }
-          })
-        }else
-          console.log("just try to create a new table")
-          pgdb.create_table(table, (err, res) => {
-            if (err) {
-              console.log(err, res)
-              callback(err, err.message)
-            }else{
-              console.log("DONE")
-              callback(null, "Ok")
-              if (table.indexOf('user_') >= 0)
-                copyTable(table)
-            }
-          })
-        }
-    });
-  }else{
-    pgdb.create_table(table, (err, res) => {
-      if (err) {
-        console.log(err, res)
-        callback(err, err.message)
-        copyTable(table)
-      }else{
-        console.log("DONE")
-        callback(null, "Ok")
-        if (table.indexOf('user_') >= 0)
-          copyTable(table)
-      }
-    })
-  }
-}
-*/
 
 function createTable(table, callback) {
+  console.log("SHOULD STOP IF CANNOT CREATE TABLE")
   console.log("CREATE TABLE: " + table)
   if (process.env.FORCETODELETEUSERTABLE == 1){
     console.log("err: drop old table")

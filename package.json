@@ -25,7 +25,7 @@
     "express": "^4.15.3",
     "express-session": "^1.15.6",
     "mathjs": "^5.1.0",
-    "pg": "^7.4.3",
+    "pg": "^8.5.0",
     "pg-escape": "^0.2.0",
     "randomatic": "^3.0.0",
     "request": "^2.88.0",
